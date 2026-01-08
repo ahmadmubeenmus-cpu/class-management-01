@@ -29,7 +29,7 @@ export function ViewStudentsDialog({ classInfo, open, onOpenChange }: ViewStuden
   
   // Keep local state in sync with prop changes
   useEffect(() => {
-    const sortedStudents = [...classInfo.students].sort((a, b) => (a.uid || "").localeCompare(b.uid || ""));
+    const sortedStudents = [...classInfo.students].sort((a, b) => (a.rollNo || "").localeCompare(b.rollNo || ""));
     setStudents(sortedStudents);
   }, [classInfo.students]);
 
@@ -71,7 +71,7 @@ export function ViewStudentsDialog({ classInfo, open, onOpenChange }: ViewStuden
               <TableRow>
                 <TableHead className="w-[50px]">SR#</TableHead>
                 <TableHead>Student Name</TableHead>
-                <TableHead>Student UID</TableHead>
+                <TableHead>Roll No.</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -85,7 +85,7 @@ export function ViewStudentsDialog({ classInfo, open, onOpenChange }: ViewStuden
                 <TableRow key={student.id}>
                   <TableCell>{index + 1}</TableCell>
                   <TableCell>{student.firstName} {student.lastName}</TableCell>
-                  <TableCell>{student.uid}</TableCell>
+                  <TableCell>{student.rollNo}</TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="destructive"

@@ -79,18 +79,18 @@ export function BulkUploadDialog({ children }: BulkUploadDialogProps) {
             const studentsCollection = collection(firestore, 'students');
 
             students.forEach(student => {
-                if (student.name && student.email) {
+                if (student.name && student.email && student.email.includes('@')) {
                     const nameParts = student.name.trim().split(' ');
                     const firstName = nameParts[0] || '';
                     const lastName = nameParts.slice(1).join(' ') || '';
-                    const uid = generateRandomString(8);
+                    const rollNo = student.email.split('@')[0];
                     const password = generateRandomString(12);
 
                     const newStudentRef = doc(studentsCollection);
                     
                     batch.set(newStudentRef, {
                         id: newStudentRef.id,
-                        uid,
+                        rollNo,
                         password,
                         firstName,
                         lastName,
@@ -139,7 +139,7 @@ export function BulkUploadDialog({ children }: BulkUploadDialogProps) {
         <DialogHeader>
           <DialogTitle>Bulk Student Upload</DialogTitle>
           <DialogDescription>
-            Upload a CSV file with student details. The file must contain 'name' and 'email' columns. A unique UID and password will be generated for each student.
+            Upload a CSV file with student details. The file must contain 'name' and 'email' columns. A unique Roll No. and password will be generated for each student.
           </DialogDescription>
         </DialogHeader>
         <div className="grid flex-1 gap-2">

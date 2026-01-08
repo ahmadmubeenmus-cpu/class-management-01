@@ -4,8 +4,8 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { collection, query, where, getDocs, doc, getDoc, Timestamp } from 'firebase/firestore';
-import { useFirestore, useMemoFirebase } from '@/firebase';
-import type { Course, Student, AttendanceRecord } from '@/lib/types';
+import { useFirestore } from '@/firebase';
+import type { Student, AttendanceRecord } from '@/lib/types';
 import { format } from 'date-fns';
 import { GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -152,7 +152,7 @@ export default function StudentAttendancePage() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight">My Attendance</h1>
-                        <p className="text-muted-foreground">Welcome, {student.firstName} {student.lastName} ({student.uid})</p>
+                        <p className="text-muted-foreground">Welcome, {student.firstName} {student.lastName} ({student.rollNo})</p>
                     </div>
                 </div>
 

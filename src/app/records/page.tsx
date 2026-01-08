@@ -69,7 +69,7 @@ export default function RecordsPage() {
     
     if(attendanceRecords.length > 0) {
         const studentIdsInRecords = [...new Set(attendanceRecords.map(rec => rec.studentId))];
-        const students = studentIdsInRecords.map(id => studentMap.get(id)).filter((s): s is Student => !!s).sort((a,b) => (a.uid || "").localeCompare(b.uid || ""));
+        const students = studentIdsInRecords.map(id => studentMap.get(id)).filter((s): s is Student => !!s).sort((a,b) => (a.rollNo || "").localeCompare(b.rollNo || ""));
         
         const dateSet = new Set<string>();
         const recordsByStudent: Record<string, Record<string, string>> = {};
@@ -125,14 +125,14 @@ export default function RecordsPage() {
     if (!reportData) return;
 
     const { students, dates, recordsByStudent, stats } = reportData;
-    const headers = ["SR#", "Student Name", "Student UID", ...dates.map(d => format(new Date(d), 'dd-MMM-yy')), "Attendance %"];
+    const headers = ["SR#", "Student Name", "Roll No", ...dates.map(d => format(new Date(d), 'dd-MMM-yy')), "Attendance %"];
     const csvRows = [headers.join(",")];
     
     students.forEach((student, index) => {
         const row = [
             index + 1,
             `"${student.firstName} ${student.lastName}"`,
-            student.uid
+            student.rollNo
         ];
         dates.forEach(date => {
             const status = recordsByStudent[student.id]?.[date] || '-';
@@ -166,13 +166,13 @@ export default function RecordsPage() {
 
     doc.text(`Attendance Register: ${courseName}`, 14, 15);
 
-    const head = [["SR#", "Student Name", "Student UID", ...dates.map(d => format(new Date(d), 'dd-MMM')), "Attendance %"]];
+    const head = [["SR#", "Student Name", "Roll No", ...dates.map(d => format(new Date(d), 'dd-MMM')), "Attendance %"]];
     
     const body = students.map((student, index) => {
         const row = [
             index + 1,
             `${student.firstName} ${student.lastName}`,
-            student.uid
+            student.rollNo
         ];
         dates.forEach(date => {
             row.push(recordsByStudent[student.id]?.[date] || '-');
@@ -202,7 +202,7 @@ export default function RecordsPage() {
            // Let autotable handle column widths automatically
            0: { cellWidth: 'auto' }, // SR#
            1: { cellWidth: 'auto' }, // Name
-           2: { cellWidth: 'auto' }, // UID
+           2: { cellWidth: 'auto' }, // Roll No
         }
     });
 
@@ -352,7 +352,7 @@ export default function RecordsPage() {
                     <TableRow>
                         <TableHead className="sticky left-0 bg-background z-10 w-[50px]">SR#</TableHead>
                         <TableHead className="sticky left-[50px] bg-background z-10 min-w-[200px]">Student</TableHead>
-                        <TableHead className="sticky left-[250px] bg-background z-10 min-w-[120px]">Student UID</TableHead>
+                        <TableHead className="sticky left-[250px] bg-background z-10 min-w-[120px]">Roll No</TableHead>
                         {reportData.dates.map(date => (
                             <TableHead key={date} className="text-center min-w-[120px]">{format(new Date(date), 'dd MMM, yy')}</TableHead>
                         ))}
@@ -364,7 +364,7 @@ export default function RecordsPage() {
                     <TableRow key={student.id}>
                         <TableCell className="sticky left-0 bg-background z-10 font-medium">{index + 1}</TableCell>
                         <TableCell className="sticky left-[50px] bg-background z-10 font-medium">{student.firstName} {student.lastName}</TableCell>
-                        <TableCell className="sticky left-[250px] bg-background z-10">{student.uid}</TableCell>
+                        <TableCell className="sticky left-[250px] bg-background z-10">{student.rollNo}</TableCell>
                         {reportData.dates.map(date => (
                             <TableCell key={date} className="text-center">
                                 {reportData.recordsByStudent[student.id]?.[date] || '-'}

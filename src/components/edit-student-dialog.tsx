@@ -27,7 +27,7 @@ interface EditStudentDialogProps {
 export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const [uid, setUid] = useState('');
+  const [rollNo, setRollNo] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -35,7 +35,7 @@ export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDi
 
   useEffect(() => {
     if (student) {
-        setUid(student.uid);
+        setRollNo(student.rollNo);
         setFirstName(student.firstName);
         setLastName(student.lastName);
         setEmail(student.email);
@@ -47,7 +47,7 @@ export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDi
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!firestore || !student) return;
-    if (!uid || !firstName || !lastName || !email) {
+    if (!rollNo || !firstName || !lastName || !email) {
         toast({
             variant: "destructive",
             title: "Missing fields",
@@ -60,7 +60,7 @@ export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDi
     
     try {
         const updateData: Partial<Student> = {
-            uid,
+            rollNo,
             firstName,
             lastName,
             email,
@@ -95,15 +95,15 @@ export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDi
           <DialogHeader>
             <DialogTitle>Edit Student</DialogTitle>
             <DialogDescription>
-              Update the details for this student.
+              Update the details for this student. The Roll No. should be derived from the email.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="uid" className="text-right">
-                Student UID
+              <Label htmlFor="rollNo" className="text-right">
+                Roll No.
               </Label>
-              <Input id="uid" value={uid} onChange={e => setUid(e.target.value)} className="col-span-3" />
+              <Input id="rollNo" value={rollNo} onChange={e => setRollNo(e.target.value)} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="firstName" className="text-right">

@@ -45,7 +45,7 @@ export function EnrollStudentDialog({ course, open, onOpenChange }: EnrollStuden
     const unenrolled = allStudents.filter(student => !enrolledStudentIds.has(student.id));
     
     // Sort the filtered list
-    unenrolled.sort((a, b) => (a.uid || "").localeCompare(b.uid || ""));
+    unenrolled.sort((a, b) => (a.rollNo || "").localeCompare(b.rollNo || ""));
     
     setUnenrolledStudents(unenrolled);
   
@@ -126,7 +126,7 @@ export function EnrollStudentDialog({ course, open, onOpenChange }: EnrollStuden
               <TableRow>
                 <TableHead className="w-[50px]">SR#</TableHead>
                 <TableHead>Student Name</TableHead>
-                <TableHead>Student UID</TableHead>
+                <TableHead>Roll No.</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -149,7 +149,7 @@ export function EnrollStudentDialog({ course, open, onOpenChange }: EnrollStuden
                 <TableRow key={student.id}>
                   <TableCell>{index + 1}</TableCell>
                   <TableCell>{student.firstName} {student.lastName}</TableCell>
-                  <TableCell>{student.uid}</TableCell>
+                  <TableCell>{student.rollNo}</TableCell>
                   <TableCell className="text-right">
                     <Button
                       size="sm"

@@ -52,19 +52,28 @@ export function AddStudentDialog({ open, onOpenChange, courseId, children }: Add
         });
         return;
     }
+    
+    if (!email.includes('@')) {
+        toast({
+            variant: "destructive",
+            title: "Invalid Email",
+            description: "Please enter a valid email address.",
+        });
+        return;
+    }
 
     const studentsCol = collection(firestore, 'students');
     try {
       const newStudentRef = doc(studentsCol); // create a ref with an auto-generated ID
       
-      const uid = generateRandomString(8);
+      const rollNo = email.split('@')[0];
       const password = generateRandomString(12);
 
       // 1. Create student document
       await setDocumentNonBlocking(newStudentRef, {
         id: newStudentRef.id,
-        uid: uid,
-        password: password, // IMPORTANT: In a real app, hash this password before saving!
+        rollNo: rollNo,
+        password: password,
         firstName,
         lastName,
         email,
@@ -79,14 +88,14 @@ export function AddStudentDialog({ open, onOpenChange, courseId, children }: Add
         }, {});
          toast({
             title: 'Student Added & Enrolled',
-            description: `UID: ${uid} | Password: ${password}`,
+            description: `Roll No: ${rollNo} | Password: ${password}`,
             className: 'bg-accent text-accent-foreground',
             duration: 15000,
           });
       } else {
          toast({
             title: 'Student Added',
-            description: `UID: ${uid} | Password: ${password}`,
+            description: `Roll No: ${rollNo} | Password: ${password}`,
             className: 'bg-accent text-accent-foreground',
             duration: 15000,
           });
@@ -115,8 +124,8 @@ export function AddStudentDialog({ open, onOpenChange, courseId, children }: Add
             <DialogTitle>Add New Student</DialogTitle>
             <DialogDescription>
               {courseId 
-                ? "Enter student details. A UID and password will be auto-generated for them."
-                : "Enter student details. A UID and password will be auto-generated."
+                ? "Enter student details. Roll No. and password will be auto-generated."
+                : "Enter student details. Roll No. and password will be auto-generated."
               }
             </DialogDescription>
           </DialogHeader>

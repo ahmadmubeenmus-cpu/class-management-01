@@ -101,9 +101,9 @@
           "type": "string",
           "description": "Unique identifier for the Student entity."
         },
-        "uid": {
+        "rollNo": {
           "type": "string",
-          "description": "Unique random ID for student login."
+          "description": "Unique roll number for student login, derived from email."
         },
         "password": {
           "type": "string",
@@ -125,7 +125,7 @@
       },
       "required": [
         "id",
-        "uid",
+        "rollNo",
         "password",
         "firstName",
         "lastName",
@@ -176,9 +176,9 @@
           "type": "string",
           "description": "Reference to Student. (Relationship: Student 1:N AttendanceRecord)"
         },
-        "studentUid": {
+        "studentRollNo": {
           "type": "string",
-          "description": "The unique login ID of the student."
+          "description": "The unique login roll number of the student."
         },
         "courseId": {
           "type": "string",
@@ -189,9 +189,9 @@
           "description": "Date of the attendance record.",
           "format": "date-time"
         },
-        "isPresent": {
-          "type": "boolean",
-          "description": "Indicates whether the student was present (true) or absent (false)."
+        "status": {
+          "type": "string",
+          "enum": ["present", "absent"]
         },
         "markedBy": {
           "$ref": "#/backend/entities/User"
@@ -200,10 +200,10 @@
       "required": [
         "id",
         "studentId",
-        "studentUid",
+        "studentRollNo",
         "courseId",
         "date",
-        "isPresent",
+        "status",
         "markedBy"
       ]
     },

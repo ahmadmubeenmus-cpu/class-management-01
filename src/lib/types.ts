@@ -17,7 +17,7 @@ export interface UserProfile {
 
 export interface Student {
   id: string;
-  uid: string; // Unique, random login ID
+  rollNo: string; // Unique, email-derived login ID
   password?: string; // Should be handled securely
   firstName: string;
   lastName: string;
@@ -36,7 +36,7 @@ export type AttendanceStatus = 'present' | 'absent';
 export interface AttendanceRecord {
   id: string;
   studentId: string; // The Firestore document ID of the student
-  studentUid: string; // The student's unique login ID
+  studentRollNo: string; // The student's unique login ID
   courseId: string;
   date: Timestamp;
   status: AttendanceStatus;

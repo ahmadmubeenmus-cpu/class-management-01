@@ -42,12 +42,17 @@ export default function StudentsPage() {
 
   const sortedStudents = useMemo(() => {
     if (!students) return [];
-    return [...students].sort((a, b) => (a.uid || "").localeCompare(b.uid || ""));
+    return [...students].sort((a, b) => (a.rollNo || "").localeCompare(b.rollNo || ""));
   }, [students]);
 
   const studentsWithoutCredentials = useMemo(() => {
     if(!sortedStudents) return [];
-    return sortedStudents.filter(s => !s.uid || !s.password);
+    // A student needs credentials if they don't have a rollNo OR a password.
+    // Or if their rollNo from their email doesn't match their current rollNo.
+    return sortedStudents.filter(s => {
+        const rollNoFromEmail = s.email.split('@')[0];
+        return !s.rollNo || !s.password || s.rollNo !== rollNoFromEmail;
+    });
   }, [sortedStudents]);
 
   const handleEditStudent = (student: Student) => {
@@ -78,16 +83,16 @@ export default function StudentsPage() {
 
     studentsWithoutCredentials.forEach(student => {
         const studentRef = doc(firestore, 'students', student.id);
-        const uid = generateRandomString(8);
-        const password = generateRandomString(12);
-        batch.update(studentRef, { uid, password });
+        const rollNo = student.email.split('@')[0];
+        const password = student.password || generateRandomString(12); // Keep existing password if it exists
+        batch.update(studentRef, { rollNo, password });
     });
 
     try {
         await batch.commit();
         toast({
-            title: "Credentials Generated",
-            description: `Generated credentials for ${studentsWithoutCredentials.length} students.`,
+            title: "Credentials Generated/Updated",
+            description: `Generated/Updated credentials for ${studentsWithoutCredentials.length} students.`,
             className: 'bg-accent text-accent-foreground'
         });
     } catch (e) {
@@ -114,7 +119,7 @@ export default function StudentsPage() {
                 <Button size="sm" className="h-8 gap-1" onClick={handleGenerateCredentials} disabled={isGenerating}>
                     <Sparkles className="h-3.5 w-3.5" />
                     <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                       {isGenerating ? 'Generating...' : `Generate Credentials (${studentsWithoutCredentials.length})`}
+                       {isGenerating ? 'Generating...' : `Update Credentials (${studentsWithoutCredentials.length})`}
                     </span>
                 </Button>
             )}
@@ -135,7 +140,7 @@ export default function StudentsPage() {
               <TableRow>
                 <TableHead className="w-[50px]">SR#</TableHead>
                 <TableHead>Student Name</TableHead>
-                <TableHead className="hidden md:table-cell">Student UID</TableHead>
+                <TableHead className="hidden md:table-cell">Roll No.</TableHead>
                 <TableHead className="hidden lg:table-cell">Email</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
@@ -160,7 +165,7 @@ export default function StudentsPage() {
                     <div className="font-medium">{student.firstName} {student.lastName}</div>
                      <div className="text-sm text-muted-foreground lg:hidden">{student.email}</div>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell font-mono">{student.uid}</TableCell>
+                  <TableCell className="hidden md:table-cell font-mono">{student.rollNo}</TableCell>
                   <TableCell className="hidden lg:table-cell">{student.email}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-2">

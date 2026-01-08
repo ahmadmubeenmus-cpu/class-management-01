@@ -15,7 +15,7 @@ import type { Student } from '@/lib/types';
 
 
 export default function StudentLoginPage() {
-  const [uid, setUid] = useState('');
+  const [rollNo, setRollNo] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -34,9 +34,9 @@ export default function StudentLoginPage() {
       // Step 1: Sign in anonymously to get permissions to query
       await signInAnonymously(auth);
 
-      // Step 2: Query for the student document with the given UID
+      // Step 2: Query for the student document with the given rollNo
       const studentsRef = collection(firestore, 'students');
-      const q = query(studentsRef, where('uid', '==', uid), limit(1));
+      const q = query(studentsRef, where('rollNo', '==', rollNo), limit(1));
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
@@ -88,14 +88,14 @@ export default function StudentLoginPage() {
             </CardHeader>
             <CardContent className="grid gap-4">
             <div className="grid gap-2">
-                <Label htmlFor="uid">Student UID</Label>
+                <Label htmlFor="rollNo">Roll No.</Label>
                 <Input
-                id="uid"
+                id="rollNo"
                 type="text"
-                placeholder="Your unique ID"
+                placeholder="Your Roll Number"
                 required
-                value={uid}
-                onChange={(e) => setUid(e.target.value)}
+                value={rollNo}
+                onChange={(e) => setRollNo(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSignIn()}
                 />
             </div>

@@ -97,7 +97,7 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
                  batch.set(newRecordRef, {
                     id: newRecordRef.id,
                     studentId: studentId,
-                    studentUid: student.uid,
+                    studentRollNo: student.rollNo,
                     courseId: classInfo.id,
                     date: Timestamp.fromDate(parsedDate),
                     status: status,
@@ -165,7 +165,7 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
                         <TableRow key={student.id}>
                             <TableCell>
                             <div className="font-medium">{student.firstName} {student.lastName}</div>
-                            <div className="text-sm text-muted-foreground">{student.uid}</div>
+                            <div className="text-sm text-muted-foreground">{student.rollNo}</div>
                             </TableCell>
                             <RadioGroup 
                                 defaultValue="present" 

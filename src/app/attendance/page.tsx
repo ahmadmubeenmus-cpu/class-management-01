@@ -61,7 +61,7 @@ function AttendanceContent() {
       }
     }
     
-    allStudents.sort((a, b) => (a.uid || "").localeCompare(b.uid || ""));
+    allStudents.sort((a, b) => (a.rollNo || "").localeCompare(b.rollNo || ""));
   
     return allStudents;
   }
