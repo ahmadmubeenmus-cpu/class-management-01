@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import type { Student, AttendanceStatus, Course } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { collection, writeBatch, doc, Timestamp } from 'firebase/firestore';
 import { format, parseISO } from 'date-fns';
 import { Input } from './ui/input';
@@ -31,6 +31,7 @@ type StudentAttendanceState = Record<string, AttendanceStatus>;
 export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { user, userProfile } = useUser();
   const [attendance, setAttendance] = useState<StudentAttendanceState>(() => {
     const initialState: StudentAttendanceState = {};
     classInfo.students.forEach(student => {
@@ -65,11 +66,11 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
   };
 
   const handleSave = async () => {
-    if (!firestore) {
+    if (!firestore || !user || !userProfile) {
         toast({
             variant: "destructive",
             title: "Error",
-            description: "Could not connect to the database.",
+            description: "Could not connect to the database or user not found.",
         });
         return;
     }
@@ -101,7 +102,7 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
                     courseId: classInfo.id,
                     date: Timestamp.fromDate(parsedDate),
                     status: status,
-                    markedBy: "admin", // Placeholder for user who marked attendance
+                    markedBy: userProfile,
                 });
             }
         });

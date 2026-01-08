@@ -40,5 +40,5 @@ export interface AttendanceRecord {
   courseId: string;
   date: Timestamp;
   status: AttendanceStatus;
-  markedBy: string;
+  markedBy: UserProfile;
 }
