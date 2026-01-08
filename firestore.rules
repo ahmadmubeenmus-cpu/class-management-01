@@ -36,13 +36,15 @@ service cloud.firestore {
     
     /**
      * @description Admin profiles. An admin can read and write their own profile.
+     * Any signed in user can read any admin profile.
      */
     match /admins/{adminId} {
-      allow get, write: if isOwner(adminId);
+      allow read: if isSignedIn();
+      allow write: if isOwner(adminId);
     }
 
     /**
-     * @description User profiles. Managed by admins.
+     * @description User profiles. Managed by admins. Users can read their own profile.
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
@@ -53,7 +55,7 @@ service cloud.firestore {
      * @description Student profiles. Readable by any signed-in user, writable by admins.
      */
     match /students/{studentId} {
-      allow get, list: if isSignedIn();
+      allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
@@ -61,7 +63,7 @@ service cloud.firestore {
      * @description Course information and nested collections. Readable by any signed-in user, writable by admins.
      */
     match /courses/{courseId} {
-      allow get, list: if isSignedIn();
+      allow read: if isSignedIn();
       allow write: if isAdmin();
 
       /**
