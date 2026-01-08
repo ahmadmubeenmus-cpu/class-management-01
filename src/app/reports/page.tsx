@@ -14,7 +14,7 @@ import { DateRange } from 'react-day-picker';
 import { startOfDay, endOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-
+import { Label } from '@/components/ui/label';
 
 interface ReportData {
     student: Student;
@@ -66,6 +66,11 @@ export default function ReportsPage() {
             where('date', '>=', startOfDay(dateRange.from)),
             where('date', '<=', endOfDay(dateRange.to))
         );
+    } else if (dateRange?.from) {
+        attendanceQuery = query(attendanceQuery, 
+            where('date', '>=', startOfDay(dateRange.from)),
+            where('date', '<=', endOfDay(dateRange.from))
+        );
     }
     
     const attendanceSnap = await getDocs(attendanceQuery);
@@ -75,7 +80,7 @@ export default function ReportsPage() {
         const studentRecords = attendanceRecords.filter(rec => rec.studentId === student.id);
         const present = studentRecords.filter(r => r.status === 'present').length;
         const absent = studentRecords.filter(r => r.status === 'absent').length;
-        const total = studentRecords.length;
+        const total = present + absent;
         const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
         
         return { student, present, absent, total, percentage };
@@ -108,12 +113,11 @@ export default function ReportsPage() {
         const a = document.createElement('a');
         a.setAttribute('hidden', '');
         a.setAttribute('href', url);
-        a.setAttribute('download', `attendance_report_${new Date().toISOString().split('T')[0]}.csv`);
+        a.setAttribute('download', `attendance_report_${selectedClassId}_${new Date().toISOString().split('T')[0]}.csv`);
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
     } else {
-        // PDF generation logic would go here.
         toast({
             variant: "default",
             title: "Coming Soon",
@@ -209,7 +213,7 @@ export default function ReportsPage() {
                   <TableHead>Student</TableHead>
                   <TableHead>Roll No.</TableHead>
                   <TableHead className="text-center">Attendance %</TableHead>
-                  <TableHead className="text-center hidden sm:table-cell">Summary (Present/Absent/Total)</TableHead>
+                  <TableHead className="text-center hidden sm:table-cell">Summary (P/A/T)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -239,9 +243,3 @@ export default function ReportsPage() {
     </main>
   );
 }
-
-const Label = ({ children, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) => (
-    <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" {...props}>
-        {children}
-    </label>
-);

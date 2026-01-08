@@ -152,7 +152,7 @@ export default function ClassesPage() {
                     <TableCell><Skeleton className="h-5 w-5" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-32 float-right" /></TableCell>
+                    <TableCell><div className="flex items-center justify-end gap-2"><Skeleton className="h-8 w-32" /><Skeleton className="h-8 w-8" /></div></TableCell>
                 </TableRow>
               ))}
               {!coursesLoading && courses?.length === 0 && <TableRow><TableCell colSpan={4} className="text-center">No classes found. Add a class to get started.</TableCell></TableRow>}

@@ -140,7 +140,18 @@ export default function AttendancePage() {
             <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
                 <Skeleton className="h-10 w-48" />
                 <Skeleton className="h-6 w-72" />
-                <Skeleton className="h-52 w-full" />
+                <Card>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-40" />
+                    <Skeleton className="h-4 w-64" />
+                  </CardHeader>
+                  <CardContent className="flex flex-col sm:flex-row gap-4">
+                    <Skeleton className="h-10 w-full sm:w-[300px]" />
+                    <div className="self-end">
+                      <Skeleton className="h-10 w-36" />
+                    </div>
+                  </CardContent>
+                </Card>
             </div>
         }>
             <AttendanceContent />

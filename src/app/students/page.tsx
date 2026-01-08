@@ -94,7 +94,7 @@ export default function StudentsPage() {
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell className="hidden lg:table-cell"><Skeleton className="h-5 w-40" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-8 float-right" /></TableCell>
+                    <TableCell><div className="flex justify-end"><Skeleton className="h-8 w-8" /></div></TableCell>
                 </TableRow>
               ))}
               {!studentsLoading && sortedStudents?.length === 0 && <TableRow><TableCell colSpan={5} className="text-center">No students found. Add a student to get started.</TableCell></TableRow>}
