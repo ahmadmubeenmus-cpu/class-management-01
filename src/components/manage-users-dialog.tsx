@@ -24,6 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Checkbox } from './ui/checkbox';
 import { deleteUser } from '@/ai/flows/delete-user-flow';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
+import { EditUserDialog } from './edit-user-dialog';
 
 
 const userSchema = z.object({
@@ -53,6 +54,9 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
   const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
   const { data: users, isLoading: usersLoading, error: usersError } = useCollection<UserProfile>(usersQuery);
 
+  const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+
   const { control, register, handleSubmit, formState: { errors }, reset } = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
     defaultValues: {
@@ -67,6 +71,11 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
       }
     }
   });
+
+  const handleEditUser = (user: UserProfile) => {
+    setSelectedUser(user);
+    setIsEditUserDialogOpen(true);
+  };
 
   const handleAddUser = async (data: UserFormData) => {
     if (!auth || !firestore) return;
@@ -150,8 +159,9 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="max-w-6xl">
         <DialogHeader>
           <DialogTitle>Manage Users</DialogTitle>
           <DialogDescription>
@@ -159,9 +169,9 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-4">
             {/* Add User Form */}
-            <div className="space-y-4">
+            <div className="space-y-4 md:col-span-1">
                 <h3 className="font-semibold text-lg">Add New User</h3>
                 <form onSubmit={handleSubmit(handleAddUser)} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -201,7 +211,7 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
                                     />
                                 )}
                             />
-                            <Label htmlFor="canMarkAttendance">Can Mark Attendance</Label>
+                            <Label htmlFor="canMarkAttendance" className="font-normal">Can Mark Attendance</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                             <Controller
@@ -215,7 +225,7 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
                                     />
                                 )}
                             />
-                            <Label htmlFor="canViewRecords">Can View Records</Label>
+                            <Label htmlFor="canViewRecords" className="font-normal">Can View Records</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                            <Controller
@@ -229,7 +239,7 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
                                     />
                                 )}
                             />
-                            <Label htmlFor="canViewDashboard">Can View Dashboard</Label>
+                            <Label htmlFor="canViewDashboard" className="font-normal">Can View Dashboard</Label>
                         </div>
                     </div>
                     <Button type="submit">Add User</Button>
@@ -237,7 +247,7 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
             </div>
 
             {/* Users List */}
-            <div className="space-y-4">
+            <div className="space-y-4 md:col-span-2">
                  <div className="flex justify-between items-center">
                     <h3 className="font-semibold text-lg">Existing Users</h3>
                     <AlertDialog>
@@ -268,16 +278,25 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
                             <TableRow>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Email</TableHead>
-                                <TableHead>Actions</TableHead>
+                                <TableHead>Permissions</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {usersLoading && <TableRow><TableCell colSpan={3}>Loading...</TableCell></TableRow>}
+                            {usersLoading && <TableRow><TableCell colSpan={4} className="text-center">Loading...</TableCell></TableRow>}
                             {!usersLoading && users?.map(user => (
                                 <TableRow key={user.id}>
-                                    <TableCell>{user.firstName} {user.lastName}</TableCell>
+                                    <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
                                     <TableCell>{user.email}</TableCell>
                                     <TableCell>
+                                        <div className="flex flex-col text-xs text-muted-foreground">
+                                           <span>{user.permissions?.canMarkAttendance ? '✓' : '✗'} Mark Attendance</span>
+                                           <span>{user.permissions?.canViewRecords ? '✓' : '✗'} View Records</span>
+                                           <span>{user.permissions?.canViewDashboard ? '✓' : '✗'} View Dashboard</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right space-x-2">
+                                        <Button variant="outline" size="sm" onClick={() => handleEditUser(user)}>Edit</Button>
                                         <AlertDialog>
                                             <AlertDialogTrigger asChild>
                                                 <Button variant="destructive" size="sm">Delete</Button>
@@ -300,7 +319,7 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
                                     </TableCell>
                                 </TableRow>
                             ))}
-                             {!usersLoading && !users?.length && <TableRow><TableCell colSpan={3} className="text-center">No users found.</TableCell></TableRow>}
+                             {!usersLoading && !users?.length && <TableRow><TableCell colSpan={4} className="text-center">No users found.</TableCell></TableRow>}
                         </TableBody>
                     </Table>
                  </div>
@@ -312,6 +331,14 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    {selectedUser && (
+        <EditUserDialog
+            open={isEditUserDialogOpen}
+            onOpenChange={setIsEditUserDialogOpen}
+            user={selectedUser}
+        />
+    )}
+    </>
   );
 }
     
