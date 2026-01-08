@@ -1,39 +1,22 @@
 /**
  * Core Philosophy: This ruleset implements a role-based access control (RBAC) model
  * for the AttendanceEase application. Authorization is determined by a user's
- * existence in either the `/admins` or `/users` collection. Admins have broad
- * management capabilities over core data like courses, students, and user roles.
- * Designated 'Users' have the specific permission to mark attendance.
+ * role. Admins have broad management capabilities over core data like courses,
+ * students, and user roles. Designated 'Users' have the specific permission to mark attendance.
  *
  * Data Structure: The structure separates roles and data entities into distinct
- * top-level collections: `/admins`, `/users`, `/students`, and `/courses`.
+ * top-level collections: /users, /students, and /courses.
  * Course-specific data, such as enrollments (`/students`) and `attendance_records`,
  * are nested within their parent `/courses/{courseId}` document. This hierarchical
  * layout enables intuitive, path-based security and performant queries.
  *
  * Key Security Decisions:
- * - Admin-Managed System: Admins are responsible for creating and managing all
- *   foundational data, including courses, students, and user accounts.
- * - Role-Based Authorization: Instead of custom claims, a user's role is determined
- *   by the existence of their UID as a document ID in `/admins` or `/users`. This
- *   is a scalable and easily managed approach.
- * - Restricted Data Listing: The list of admins and users is not publicly readable
- *   to prevent user enumeration attacks.
+ * - Admin by Email: A user is considered an admin if their email is 'admin@example.com'.
+ *   This is a simple and effective method for a demo application.
+ * - Role-Based Authorization: Other users' roles are determined by the existence of their
+ *   UID as a document ID in the /users collection.
  * - Granular Permissions: 'Users' can create attendance records, but only 'Admins'
  *   can modify or delete them, ensuring data integrity and providing an audit trail.
- *
- * Denormalization for Authorization: This ruleset relies on path-based security.
- * By nesting attendance records under a specific course (`/courses/{courseId}/...`),
- * we can easily validate that new records belong to the correct course without
- * needing extra `get()` calls. Further, new attendance records require a `markedBy`
- * field matching the creator's UID, denormalizing ownership directly onto the record
- * for simple and secure validation.
- *
- * Structural Segregation: The system segregates users by role into distinct
- * collections (`/admins` and `/users`). This provides a clear, secure, and
-
- * performant way to check roles using `exists()` calls, which is superior to
- * managing roles within a single, large users collection.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -52,10 +35,10 @@ service cloud.firestore {
 
     /**
      * Checks if the currently authenticated user is an administrator by verifying
-     * the existence of their user UID in the /admins collection.
+     * their email address.
      */
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      return isSignedIn() && request.auth.token.email == 'admin@example.com';
     }
 
     /**
@@ -94,23 +77,11 @@ service cloud.firestore {
     // --------------------------------------------------------------------
     // Collection Rules
     // --------------------------------------------------------------------
-
-    /**
-     * @description Admin profiles. Admins can create other admins and update their own profiles.
-     * @path /admins/{adminId}
-     * @allow (create) An existing admin OR a new user creating their own doc.
-     * @allow (update) An admin updates their own profile document. auth.uid must match {adminId}.
-     * @deny (list) A user attempts to list all admin documents.
-     * @deny (delete) An admin attempts to delete their own document.
-     * @principle Restricts access to a user's own data tree and enforces role-based creation.
-     */
+    
+    // The /admins collection is no longer needed for authorization,
+    // but we can keep rules for it in case it's used for storing profile data.
     match /admins/{adminId} {
-      allow get: if isOwner(adminId) || isAdmin();
-      allow list: if isAdmin();
-      // Allow creation if the user is creating their OWN document, or if an admin is creating for someone else.
-      allow create: if isOwner(adminId) || isAdmin();
-      allow update: if isOwner(adminId) && request.resource.data.id == resource.data.id;
-      allow delete: if isAdmin() && !isOwner(adminId) && isExistingDoc();
+      allow read, write: if isAdmin();
     }
 
     /**
