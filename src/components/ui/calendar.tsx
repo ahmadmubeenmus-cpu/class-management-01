@@ -26,6 +26,9 @@ function Calendar({
     if (onDateSelect) {
       onDateSelect(date);
     }
+    if (props.onDayClick) {
+        props.onDayClick(date, modifiers, new MouseEvent('click') as any);
+    }
   }
 
   return (
