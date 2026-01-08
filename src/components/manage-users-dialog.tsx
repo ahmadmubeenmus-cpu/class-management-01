@@ -17,11 +17,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
-import { collection, doc, deleteDoc, setDoc } from 'firebase/firestore';
+import { collection, doc, setDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import type { UserProfile } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Checkbox } from './ui/checkbox';
+import { deleteUser } from '@/ai/flows/delete-user-flow';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
+
 
 const userSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -48,7 +51,7 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
   const auth = useAuth();
 
   const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
-  const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
+  const { data: users, isLoading: usersLoading, error: usersError } = useCollection<UserProfile>(usersQuery);
 
   const { control, register, handleSubmit, formState: { errors }, reset } = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
@@ -66,29 +69,22 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
   });
 
   const handleAddUser = async (data: UserFormData) => {
-    if (!auth || !firestore) {
-      toast({ variant: 'destructive', title: 'Firebase not initialized.' });
-      return;
-    }
-    
+    if (!auth || !firestore) return;
     try {
-      // Step 1: Create user in Firebase Auth
-      // Note: This creates the user but doesn't sign them in here.
-      // We'd need a temporary auth instance to do this without affecting the admin's session.
-      // For this app's purpose, creating them is sufficient.
+      // 1. Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      const user = userCredential.user;
-      
-      // Step 2: Create user profile in Firestore
-      const userDocRef = doc(firestore, 'users', user.uid);
+      const newUser = userCredential.user;
+
+      // 2. Create user profile in Firestore
+      const userDocRef = doc(firestore, 'users', newUser.uid);
       await setDoc(userDocRef, {
-        id: user.uid,
+        id: newUser.uid,
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
-        username: data.email,
         role: 'user',
         permissions: data.permissions,
+        username: data.email, // Or generate a username
       });
 
       toast({
@@ -101,7 +97,7 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
     } catch(e: any) {
         let errorMessage = "An unexpected error occurred.";
         if (e.code === 'auth/email-already-in-use') {
-            errorMessage = "A user with this email already exists.";
+            errorMessage = 'This email address is already in use by another account.';
         } else if (e.message) {
             errorMessage = e.message;
         }
@@ -114,15 +110,20 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!firestore) return;
-    // NOTE: This only deletes the Firestore document, not the Firebase Auth user.
-    // A more robust solution would require a server-side function to delete the auth user.
-    await deleteDoc(doc(firestore, 'users', userId));
-     toast({
-      title: 'User Deleted',
-      description: 'The user has been removed from the database.',
-      className: 'bg-accent text-accent-foreground',
-    });
+    try {
+        await deleteUser({ userId });
+        toast({
+            title: 'User Deleted',
+            description: 'The user has been permanently deleted.',
+            className: 'bg-accent text-accent-foreground',
+        });
+    } catch (e: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Deletion Failed',
+            description: e.message || 'Could not delete user.',
+        });
+    }
   }
 
   return (
@@ -231,7 +232,25 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
                                     <TableCell>{user.firstName} {user.lastName}</TableCell>
                                     <TableCell>{user.email}</TableCell>
                                     <TableCell>
-                                        <Button variant="destructive" size="sm" onClick={() => handleDeleteUser(user.id)}>Delete</Button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="destructive" size="sm">Delete</Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This action cannot be undone. This will permanently delete the user's account and all associated data.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteUser(user.id)}>
+                                                        Delete
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </TableCell>
                                 </TableRow>
                             ))}

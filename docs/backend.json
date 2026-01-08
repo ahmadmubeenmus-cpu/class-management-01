@@ -185,8 +185,7 @@
           "description": "Indicates whether the student was present (true) or absent (false)."
         },
         "markedBy": {
-          "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N AttendanceRecord) User id of user who marked the attendence"
+          "$ref": "#/backend/entities/User"
         }
       },
       "required": [
@@ -213,8 +212,7 @@
           "description": "Reference to Course. (Relationship: Course N:N Student)"
         },
         "studentId": {
-          "type": "string",
-          "description": "Reference to Student. (Relationship: Student N:N Course)"
+          "$ref": "#/backend/entities/Student"
         }
       },
       "required": [
