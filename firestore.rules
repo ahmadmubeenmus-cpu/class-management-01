@@ -87,7 +87,7 @@ service cloud.firestore {
     match /admins/{adminId} {
       allow get: if isOwner(adminId);
       allow create: if isOwner(adminId);
-      allow update: if isOwner(adminId) && isExistingDoc() && request.resource.data.id == resource.data.id;
+      allow update: if isOwner(adminId) && isExistingDoc();
       allow list, delete: if false;
     }
 
