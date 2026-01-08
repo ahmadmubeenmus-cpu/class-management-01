@@ -19,10 +19,6 @@ import { useToast } from '@/hooks/use-toast';
 import { GraduationCap } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
-import {
-  initiateEmailSignIn,
-  initiateEmailSignUp,
-} from '@/firebase/non-blocking-login';
 
 export function Login() {
   const auth = useAuth();
@@ -36,15 +32,20 @@ export function Login() {
     if (!auth || !firestore) return;
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // First, just try to sign in.
+      await signInWithEmailAndPassword(auth, email, password);
       toast({ title: 'Signed in successfully' });
     } catch (error: any) {
-      if (error.code === 'auth/user-not-found' && email === 'admin@example.com') {
-        // If the admin user doesn't exist, create it.
+      // If sign-in fails, check if it's because the user doesn't exist.
+      // 'auth/invalid-credential' can mean user not found or wrong password.
+      // We'll attempt to create the user only if it's the demo admin email.
+      if (error.code === 'auth/invalid-credential' && email === 'admin@example.com') {
         try {
+          // Attempt to create the admin user.
           const userCredential = await createUserWithEmailAndPassword(auth, email, password);
           const user = userCredential.user;
-          // Also create an admin document in Firestore
+          
+          // Also create the admin document in Firestore.
           const adminRef = doc(firestore, 'admins', user.uid);
           await setDoc(adminRef, {
             id: user.uid,
@@ -53,25 +54,25 @@ export function Login() {
             lastName: 'User',
             role: 'super_admin'
           });
+
           toast({ title: 'Admin account created. Signed in successfully.' });
+          // The onAuthStateChanged listener in the provider will handle the redirect.
+
         } catch (creationError: any) {
-          toast({
+          // This might fail if the user exists but the password was wrong on the first attempt.
+          // In that case, the original error message is more relevant.
+           toast({
             variant: 'destructive',
-            title: 'Admin Creation Failed',
-            description: creationError.message,
+            title: 'Authentication Error',
+            description: "Invalid email or password.",
           });
         }
-      } else if (error.code === 'auth/invalid-credential') {
-         toast({
-          variant: 'destructive',
-          title: 'Authentication Error',
-          description: "Invalid email or password.",
-        });
       } else {
+        // For any other error, display it.
         toast({
           variant: 'destructive',
           title: 'Authentication Error',
-          description: error.message,
+          description: "Invalid email or password.",
         });
       }
     }
