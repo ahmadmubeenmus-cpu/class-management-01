@@ -1,35 +1,31 @@
 'use client';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/firebase';
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  getAuth,
-} from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { GraduationCap } from 'lucide-react';
 
 export function Login() {
   const auth = useAuth();
   const { toast } = useToast();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isSigningIn, setIsSigningIn] = useState(true);
+  const [email, setEmail] = useState('admin@example.com');
+  const [password, setPassword] = useState('password');
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (isSigningIn) {
-        await signInWithEmailAndPassword(auth, email, password);
-        toast({ title: 'Signed in successfully' });
-      } else {
-        await createUserWithEmailAndPassword(auth, email, password);
-        toast({ title: 'Account created successfully' });
-      }
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({ title: 'Signed in successfully' });
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -42,20 +38,24 @@ export function Login() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40">
       <div className="flex flex-col items-center gap-4 text-center">
-         <div className="flex items-center gap-2 text-lg font-semibold md:text-base">
-            <GraduationCap className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold font-headline">AttendanceEase</h1>
-          </div>
-          <p className="text-muted-foreground">The one-stop solution for attendance management.</p>
+        <div className="flex items-center gap-2 text-lg font-semibold md:text-base">
+          <GraduationCap className="h-8 w-8 text-primary" />
+          <h1 className="text-3xl font-bold font-headline">AttendanceEase</h1>
+        </div>
+        <p className="text-muted-foreground">
+          The one-stop solution for attendance management.
+        </p>
         <Card className="mx-auto mt-4 w-full max-w-sm">
           <CardHeader>
-            <CardTitle className="text-2xl">{isSigningIn ? 'Sign In' : 'Sign Up'}</CardTitle>
+            <CardTitle className="text-2xl">Sign In</CardTitle>
             <CardDescription>
-              Enter your email below to {isSigningIn ? 'login to' : 'create'} your account
+              Enter your email below to login to your account.
+              <br />
+              Use <strong>admin@example.com</strong> and <strong>password</strong> to log in.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleAuth}>
+            <form onSubmit={handleLogin}>
               <div className="grid gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
@@ -81,16 +81,10 @@ export function Login() {
                   />
                 </div>
                 <Button type="submit" className="w-full">
-                  {isSigningIn ? 'Sign In' : 'Create Account'}
+                  Sign In
                 </Button>
               </div>
             </form>
-            <div className="mt-4 text-center text-sm">
-              {isSigningIn ? "Don't have an account?" : 'Already have an account?'}
-              <Button variant="link" onClick={() => setIsSigningIn(!isSigningIn)}>
-                {isSigningIn ? 'Sign up' : 'Sign in'}
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>
