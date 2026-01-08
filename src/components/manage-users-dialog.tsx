@@ -126,6 +126,29 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
     }
   }
 
+  const handleDeleteAllUsers = async () => {
+    if (!users || users.length === 0) {
+      toast({ title: 'No users to delete.' });
+      return;
+    }
+    try {
+      for (const user of users) {
+        await deleteUser({ userId: user.id });
+      }
+      toast({
+        title: 'All Users Deleted',
+        description: 'All non-admin user profiles have been deleted.',
+        className: 'bg-accent text-accent-foreground',
+      });
+    } catch (e: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Deletion Failed',
+        description: 'An error occurred while deleting all users.',
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
@@ -215,7 +238,30 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
 
             {/* Users List */}
             <div className="space-y-4">
-                 <h3 className="font-semibold text-lg">Existing Users</h3>
+                 <div className="flex justify-between items-center">
+                    <h3 className="font-semibold text-lg">Existing Users</h3>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm" disabled={!users || users.length === 0}>
+                                Delete All Users
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete all non-admin user accounts.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteAllUsers}>
+                                    Yes, delete all users
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                 </div>
                  <div className="border rounded-md max-h-96 overflow-y-auto">
                     <Table>
                         <TableHeader>
