@@ -96,13 +96,13 @@ function AttendanceContent() {
           <CardTitle>Select a Class</CardTitle>
           <CardDescription>Choose the class for which you want to mark attendance.</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col sm:flex-row gap-4">
+        <CardContent className="flex flex-col sm:flex-row sm:items-end gap-4">
           {coursesLoading ? (
-             <div className="grid gap-2">
+             <div className="grid gap-2 w-full sm:w-auto">
                 <Skeleton className='h-10 w-full sm:w-[300px]'/>
              </div>
           ) : (
-             <div className="grid gap-2">
+             <div className="grid gap-2 w-full sm:w-auto">
                 <Select value={selectedClassId} onValueChange={handleClassSelect}>
                 <SelectTrigger className="w-full sm:w-[300px]">
                     <SelectValue placeholder="Select a class" />
@@ -115,8 +115,8 @@ function AttendanceContent() {
                 </Select>
             </div>
           )}
-          <div className="self-end">
-            <Button onClick={handleMarkAttendance} disabled={!selectedClassId || isFetchingStudents}>
+          <div className="self-stretch sm:self-auto">
+            <Button onClick={handleMarkAttendance} disabled={!selectedClassId || isFetchingStudents} className='w-full sm:w-auto'>
                 {isFetchingStudents ? 'Loading Students...' : 'Mark Attendance'}
             </Button>
           </div>
