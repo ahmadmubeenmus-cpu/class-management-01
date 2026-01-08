@@ -1,9 +1,8 @@
 'use client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, UserPlus } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import { BulkUploadDialog } from './bulk-upload-dialog';
-import { AddStudentDialog } from './add-student-dialog';
 import { AddClassDialog } from './add-class-dialog';
 
 export function AdminTab() {
@@ -41,11 +40,10 @@ export function AdminTab() {
         <Card>
           <CardHeader>
             <CardTitle>Manage Students</CardTitle>
-            <CardDescription>Bulk upload or manually add students.</CardDescription>
+            <CardDescription>Bulk upload students to the system.</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-end gap-2">
             <BulkUploadDialog />
-            <AddStudentDialog />
           </CardContent>
         </Card>
       </div>

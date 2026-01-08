@@ -6,31 +6,35 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 
-export function AddStudentDialog() {
+
+interface AddStudentDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  courseId: string;
+}
+
+export function AddStudentDialog({ open, onOpenChange, courseId }: AddStudentDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const [open, setOpen] = useState(false);
   const [studentId, setStudentId] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
 
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!firestore) return;
+    if (!firestore || !courseId) return;
     if (!studentId || !firstName || !lastName || !email) {
         toast({
             variant: "destructive",
@@ -41,23 +45,41 @@ export function AddStudentDialog() {
     }
 
     const studentsCol = collection(firestore, 'students');
-    addDocumentNonBlocking(studentsCol, {
-        studentId,
-        firstName,
-        lastName,
-        email,
-    }).then(docRef => {
-        if (docRef) {
-            updateDocumentNonBlocking(docRef, { id: docRef.id });
-        }
-    });
+    try {
+      const newStudentRef = await addDocumentNonBlocking(studentsCol, {
+          studentId,
+          firstName,
+          lastName,
+          email,
+      });
+
+      if (newStudentRef) {
+          // Update the student with its own ID
+          await updateDocumentNonBlocking(newStudentRef, { id: newStudentRef.id });
+
+          // Enroll the student in the course
+          const courseStudentRef = doc(firestore, `courses/${courseId}/students/${newStudentRef.id}`);
+          await setDocumentNonBlocking(courseStudentRef, {
+            studentId: newStudentRef.id,
+            courseId: courseId
+          }, {});
+
+          toast({
+            title: 'Student Added & Enrolled',
+            description: 'The new student has been successfully created and enrolled in the class.',
+            className: 'bg-accent text-accent-foreground'
+          });
+      }
+    } catch(e) {
+       toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to add student.",
+        });
+    }
+
     
-    toast({
-      title: 'Student Added',
-      description: 'The new student has been successfully created.',
-      className: 'bg-accent text-accent-foreground'
-    });
-    setOpen(false);
+    onOpenChange(false);
     setStudentId('');
     setFirstName('');
     setLastName('');
@@ -65,21 +87,13 @@ export function AddStudentDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" className="h-8 gap-1">
-          <PlusCircle className="h-3.5 w-3.5" />
-          <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-            Add Student
-          </span>
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Add New Student</DialogTitle>
             <DialogDescription>
-              Enter the details for the new student. Click save when you're done.
+              Enter the details for the new student. They will be automatically enrolled in the selected class.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
