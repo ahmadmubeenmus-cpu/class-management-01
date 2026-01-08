@@ -174,7 +174,7 @@ export function ReportsTab() {
                 {reportData.map(({ student, class: c, percentage, present, absent, late, excused }) => (
                   <TableRow key={student.id}>
                     <TableCell>
-                      <div className="font-medium">{student.firstName} ${student.lastName}</div>
+                      <div className="font-medium">{student.firstName} {student.lastName}</div>
                       <div className="text-sm text-muted-foreground">{student.studentId}</div>
                     </TableCell>
                     {selectedClassId === 'all' && <TableCell>{c.courseName}</TableCell>}
