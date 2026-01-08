@@ -191,9 +191,9 @@ export default function RecordsPage() {
             fillColor: [245, 245, 245],
         },
         columnStyles: {
-            0: { cellWidth: 10 },
-            1: { cellWidth: 40 },
-            2: { cellWidth: 20 },
+            0: { cellWidth: 'auto' }, // SR#
+            1: { cellWidth: 'auto' }, // Student Name
+            2: { cellWidth: 'auto' }, // Roll No.
         }
     });
 
