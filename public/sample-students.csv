@@ -1,6 +1,4 @@
-studentId,name
-101,Alice Johnson
-102,Bob Williams
-103,Charlie Brown
-104,Diana Miller
-105,Eve Davis
+studentId,name,email
+101,John Doe,john.doe@example.com
+102,Jane Smith,jane.smith@example.com
+103,Peter Jones,peter.jones@example.com

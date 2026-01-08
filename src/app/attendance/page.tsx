@@ -8,6 +8,7 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import type { Course, Student } from '@/lib/types';
 import { AttendanceSheet } from '@/components/attendance-sheet';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface CourseWithStudents extends Course {
   students: Student[];
@@ -19,11 +20,13 @@ function AttendanceContent() {
   const courseIdFromQuery = searchParams.get('courseId');
 
   const coursesQuery = useMemoFirebase(() => collection(firestore, 'courses'), [firestore]);
-  const { data: courses } = useCollection<Course>(coursesQuery);
+  const { data: courses, isLoading: coursesLoading } = useCollection<Course>(coursesQuery);
 
   const [selectedClassId, setSelectedClassId] = useState<string | undefined>(courseIdFromQuery ?? undefined);
   const [selectedClass, setSelectedClass] = useState<CourseWithStudents | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isFetchingStudents, setIsFetchingStudents] = useState(false);
+
 
   useEffect(() => {
     if (courseIdFromQuery) {
@@ -68,8 +71,10 @@ function AttendanceContent() {
     const classInfo = courses.find(c => c.id === selectedClassId);
     if (!classInfo) return;
 
+    setIsFetchingStudents(true);
     const studentsList = await fetchEnrolledStudents(classInfo.id);
     setSelectedClass({ ...classInfo, students: studentsList });
+    setIsFetchingStudents(false);
     setIsSheetOpen(true);
   };
 
@@ -92,20 +97,28 @@ function AttendanceContent() {
           <CardDescription>Choose the class for which you want to mark attendance.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-4">
-          <div className="grid gap-2">
-            <Select value={selectedClassId} onValueChange={handleClassSelect}>
-              <SelectTrigger className="w-full sm:w-[300px]">
-                <SelectValue placeholder="Select a class" />
-              </SelectTrigger>
-              <SelectContent>
-                {courses?.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.courseName}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {coursesLoading ? (
+             <div className="grid gap-2">
+                <Skeleton className='h-10 w-full sm:w-[300px]'/>
+             </div>
+          ) : (
+             <div className="grid gap-2">
+                <Select value={selectedClassId} onValueChange={handleClassSelect}>
+                <SelectTrigger className="w-full sm:w-[300px]">
+                    <SelectValue placeholder="Select a class" />
+                </SelectTrigger>
+                <SelectContent>
+                    {courses?.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.courseName}</SelectItem>
+                    ))}
+                </SelectContent>
+                </Select>
+            </div>
+          )}
           <div className="self-end">
-            <Button onClick={handleMarkAttendance} disabled={!selectedClassId}>Mark Attendance</Button>
+            <Button onClick={handleMarkAttendance} disabled={!selectedClassId || isFetchingStudents}>
+                {isFetchingStudents ? 'Loading Students...' : 'Mark Attendance'}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -123,7 +136,13 @@ function AttendanceContent() {
 
 export default function AttendancePage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={
+            <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
+                <Skeleton className="h-10 w-48" />
+                <Skeleton className="h-6 w-72" />
+                <Skeleton className="h-52 w-full" />
+            </div>
+        }>
             <AttendanceContent />
         </Suspense>
     )

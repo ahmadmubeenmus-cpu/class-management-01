@@ -15,10 +15,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import type { Student, Course } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, doc, writeBatch } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface EnrollStudentDialogProps {
-  course: Course;
+  course: Course & { students: Student[] };
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -31,20 +32,30 @@ export function EnrollStudentDialog({ course, open, onOpenChange }: EnrollStuden
   const { data: allStudents, isLoading: studentsLoading } = useCollection<Student>(allStudentsQuery);
   
   const [unenrolledStudents, setUnenrolledStudents] = useState<Student[]>([]);
+  const [enrollingStudentId, setEnrollingStudentId] = useState<string | null>(null);
 
   const enrolledStudentIds = useMemo(() => new Set(course.students.map(s => s.id)), [course.students]);
 
   useEffect(() => {
-    if (!open || !allStudents) return;
-
+    if (!open || !allStudents) {
+      setUnenrolledStudents([]);
+      return;
+    }
+  
+    // Filter out already enrolled students
     const unenrolled = allStudents.filter(student => !enrolledStudentIds.has(student.id));
+    
+    // Sort the filtered list
     unenrolled.sort((a, b) => (a.studentId || "").localeCompare(b.studentId || ""));
+    
     setUnenrolledStudents(unenrolled);
-
+  
   }, [open, allStudents, enrolledStudentIds]);
+  
 
   const handleEnrollStudent = async (studentId: string) => {
     if (!firestore) return;
+    setEnrollingStudentId(studentId);
 
     const studentEnrollmentRef = doc(firestore, `courses/${course.id}/students/${studentId}`);
     
@@ -58,7 +69,7 @@ export function EnrollStudentDialog({ course, open, onOpenChange }: EnrollStuden
             description: 'The student has been successfully enrolled in this class.',
             className: 'bg-accent text-accent-foreground',
         });
-        // Refresh the list of unenrolled students
+        // Refresh the list of unenrolled students by removing the one just enrolled
         setUnenrolledStudents(prev => prev.filter(s => s.id !== studentId));
     } catch (error) {
         toast({
@@ -66,6 +77,8 @@ export function EnrollStudentDialog({ course, open, onOpenChange }: EnrollStuden
             title: "Error",
             description: "Failed to enroll student in the class.",
         });
+    } finally {
+        setEnrollingStudentId(null);
     }
   };
 
@@ -120,9 +133,13 @@ export function EnrollStudentDialog({ course, open, onOpenChange }: EnrollStuden
             </TableHeader>
             <TableBody>
               {studentsLoading && (
-                 <TableRow>
-                  <TableCell colSpan={4} className="text-center">Loading students...</TableCell>
-                </TableRow>
+                 Array.from({length: 3}).map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell colSpan={4}>
+                            <Skeleton className='h-8 w-full' />
+                        </TableCell>
+                    </TableRow>
+                 ))
               )}
               {!studentsLoading && unenrolledStudents.length === 0 && (
                 <TableRow>
@@ -138,8 +155,9 @@ export function EnrollStudentDialog({ course, open, onOpenChange }: EnrollStuden
                     <Button
                       size="sm"
                       onClick={() => handleEnrollStudent(student.id)}
+                      disabled={enrollingStudentId === student.id}
                     >
-                      Enroll
+                      {enrollingStudentId === student.id ? 'Enrolling...' : 'Enroll'}
                     </Button>
                   </TableCell>
                 </TableRow>

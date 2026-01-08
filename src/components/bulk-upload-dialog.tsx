@@ -50,12 +50,15 @@ export function BulkUploadDialog({ children }: BulkUploadDialogProps) {
       header: true,
       skipEmptyLines: true,
       complete: async (results) => {
-        const students = results.data as { studentId: string; name: string }[];
-        if (!students.length || !results.meta.fields?.includes('studentId') || !results.meta.fields?.includes('name')) {
+        const students = results.data as { studentId: string; name: string, email: string }[];
+        const requiredFields = ['studentId', 'name', 'email'];
+        const hasRequiredFields = results.meta.fields && requiredFields.every(field => results.meta.fields?.includes(field));
+
+        if (!students.length || !hasRequiredFields) {
             toast({
                 variant: 'destructive',
                 title: 'Invalid File Format',
-                description: 'The CSV file is empty or does not contain the required headers: "studentId" and "name".',
+                description: 'The CSV file is empty or does not contain the required headers: "studentId", "name", and "email".',
             });
             setIsUploading(false);
             return;
@@ -66,12 +69,10 @@ export function BulkUploadDialog({ children }: BulkUploadDialogProps) {
             const studentsCollection = collection(firestore, 'students');
 
             students.forEach(student => {
-                if (student.studentId && student.name) {
+                if (student.studentId && student.name && student.email) {
                     const nameParts = student.name.trim().split(' ');
                     const firstName = nameParts[0] || '';
                     const lastName = nameParts.slice(1).join(' ') || '';
-                    // Generate email from first and last name, removing spaces and converting to lowercase
-                    const email = `${firstName.toLowerCase().replace(/\s/g, '')}${lastName.toLowerCase().replace(/\s/g, '')}@example.com`;
 
                     const newStudentRef = doc(studentsCollection);
                     
@@ -80,7 +81,7 @@ export function BulkUploadDialog({ children }: BulkUploadDialogProps) {
                         studentId: student.studentId,
                         firstName,
                         lastName,
-                        email,
+                        email: student.email,
                     });
                 }
             });
@@ -125,7 +126,7 @@ export function BulkUploadDialog({ children }: BulkUploadDialogProps) {
         <DialogHeader>
           <DialogTitle>Bulk Student Upload</DialogTitle>
           <DialogDescription>
-            Upload a CSV file with student details. The file must contain 'studentId' (roll number) and 'name' columns.
+            Upload a CSV file with student details. The file must contain 'studentId' (roll number), 'name', and 'email' columns.
           </DialogDescription>
         </DialogHeader>
         <div className="grid flex-1 gap-2">

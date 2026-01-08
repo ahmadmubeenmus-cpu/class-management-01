@@ -5,13 +5,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerWithRange } from '@/components/date-picker-with-range';
-import { Download } from 'lucide-react';
+import { Download, FileText } from 'lucide-react';
 import type { Student, Course, AttendanceRecord } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { DateRange } from 'react-day-picker';
 import { startOfDay, endOfDay } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 interface ReportData {
@@ -24,15 +26,20 @@ interface ReportData {
 
 export default function ReportsPage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
   const coursesQuery = useMemoFirebase(() => collection(firestore, 'courses'), [firestore]);
-  const { data: courses } = useCollection<Course>(coursesQuery);
+  const { data: courses, isLoading: coursesLoading } = useCollection<Course>(coursesQuery);
 
   const [selectedClassId, setSelectedClassId] = useState<string | undefined>(undefined);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [reportData, setReportData] = useState<ReportData[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const handleGenerateReport = async () => {
     if (!firestore || !selectedClassId) return;
+
+    setIsGenerating(true);
+    setReportData([]);
 
     const studentEnrollmentsRef = collection(firestore, `courses/${selectedClassId}/students`);
     const studentEnrollmentsSnap = await getDocs(studentEnrollmentsRef);
@@ -40,6 +47,7 @@ export default function ReportsPage() {
     
     if (studentIds.length === 0) {
       setReportData([]);
+      setIsGenerating(false);
       return;
     }
     
@@ -74,6 +82,7 @@ export default function ReportsPage() {
     });
 
     setReportData(data);
+    setIsGenerating(false);
   };
 
   const handleDownload = (format: 'csv' | 'pdf') => {
@@ -105,7 +114,11 @@ export default function ReportsPage() {
         document.body.removeChild(a);
     } else {
         // PDF generation logic would go here.
-        alert('PDF download is not implemented yet.');
+        toast({
+            variant: "default",
+            title: "Coming Soon",
+            description: "PDF download functionality is not implemented yet.",
+        });
     }
   };
 
@@ -130,6 +143,7 @@ export default function ReportsPage() {
           </div>
           <div className="grid gap-2">
             <Label>Class</Label>
+            {coursesLoading ? <Skeleton className="h-10 w-full sm:w-[200px]" /> : (
             <Select value={selectedClassId} onValueChange={setSelectedClassId}>
               <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Select a class" />
@@ -140,14 +154,30 @@ export default function ReportsPage() {
                 ))}
               </SelectContent>
             </Select>
+            )}
           </div>
           <div className="self-end">
-            <Button onClick={handleGenerateReport} disabled={!selectedClassId}>Generate Report</Button>
+            <Button onClick={handleGenerateReport} disabled={!selectedClassId || isGenerating}>
+                {isGenerating ? 'Generating...' : 'Generate Report'}
+            </Button>
           </div>
         </CardContent>
       </Card>
+      
+      {isGenerating && (
+        <Card>
+            <CardHeader><CardTitle>Generating Report...</CardTitle></CardHeader>
+            <CardContent>
+                <div className='space-y-2'>
+                    {Array.from({length: 5}).map((_, i) => (
+                        <Skeleton key={i} className='h-12 w-full'/>
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
+      )}
 
-      {reportData.length > 0 && (
+      {reportData.length > 0 && !isGenerating && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
               <div>
@@ -161,6 +191,12 @@ export default function ReportsPage() {
                     <Download className="h-3.5 w-3.5" />
                     <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                         Download CSV
+                    </span>
+                </Button>
+                <Button size="sm" variant="outline" className="h-8 gap-1" onClick={() => handleDownload('pdf')}>
+                    <FileText className="h-3.5 w-3.5" />
+                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                        Download PDF
                     </span>
                 </Button>
               </div>

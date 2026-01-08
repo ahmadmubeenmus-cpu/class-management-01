@@ -21,6 +21,7 @@ import { EnrollStudentDialog } from '@/components/enroll-student-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface CourseWithStudents extends Course {
   students: Student[];
@@ -146,7 +147,14 @@ export default function ClassesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {coursesLoading && <TableRow><TableCell colSpan={4} className="text-center">Loading...</TableCell></TableRow>}
+              {coursesLoading && Array.from({ length: 3 }).map((_, i) => (
+                <TableRow key={i}>
+                    <TableCell><Skeleton className="h-5 w-5" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-32 float-right" /></TableCell>
+                </TableRow>
+              ))}
               {!coursesLoading && courses?.length === 0 && <TableRow><TableCell colSpan={4} className="text-center">No classes found. Add a class to get started.</TableCell></TableRow>}
               {courses?.map((classItem, index) => (
                 <TableRow key={classItem.id}>

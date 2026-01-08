@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -18,6 +18,7 @@ import { AddStudentDialog } from '@/components/add-student-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { EditStudentDialog } from '@/components/edit-student-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function StudentsPage() {
   const firestore = useFirestore();
@@ -29,7 +30,7 @@ export default function StudentsPage() {
   const [isEditStudentDialogOpen, setIsEditStudentDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
-  const sortedStudents = useMemoFirebase(() => {
+  const sortedStudents = useMemo(() => {
     if (!students) return [];
     return [...students].sort((a, b) => (a.studentId || "").localeCompare(b.studentId || ""));
   }, [students]);
@@ -87,7 +88,15 @@ export default function StudentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {studentsLoading && <TableRow><TableCell colSpan={5} className="text-center">Loading...</TableCell></TableRow>}
+              {studentsLoading && Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                    <TableCell><Skeleton className="h-5 w-5" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-5 w-40" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-8 float-right" /></TableCell>
+                </TableRow>
+              ))}
               {!studentsLoading && sortedStudents?.length === 0 && <TableRow><TableCell colSpan={5} className="text-center">No students found. Add a student to get started.</TableCell></TableRow>}
               {sortedStudents?.map((student, index) => (
                 <TableRow key={student.id}>
