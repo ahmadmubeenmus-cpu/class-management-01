@@ -17,7 +17,6 @@ import { useFirestore } from '@/firebase';
 import { collection, writeBatch, doc, Timestamp } from 'firebase/firestore';
 import { Calendar } from './ui/calendar';
 import { format } from 'date-fns';
-import { Label } from './ui/label';
 
 
 interface AttendanceDialogProps {
@@ -133,7 +132,6 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent 
         className={step === 'date' ? 'sm:max-w-auto' : 'max-w-4xl w-full'}
-        onOpenAutoFocus={(e) => e.preventDefault()}
         >
         <DialogHeader>
           <DialogTitle>Mark Attendance: {classInfo.courseName}</DialogTitle>
