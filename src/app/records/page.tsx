@@ -1,18 +1,20 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download } from 'lucide-react';
+import { Download, Trash2 } from 'lucide-react';
 import type { Student, Course, AttendanceRecord } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, getDocs, where } from 'firebase/firestore';
+import { collection, query, getDocs, writeBatch, Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 
 interface StudentStats {
@@ -31,6 +33,7 @@ interface TransformedData {
 
 export default function RecordsPage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
   
   const coursesQuery = useMemoFirebase(() => collection(firestore, 'courses'), [firestore]);
   const { data: courses, isLoading: coursesLoading } = useCollection<Course>(coursesQuery);
@@ -57,7 +60,12 @@ export default function RecordsPage() {
     const attendanceQuery = query(attendanceRef);
 
     const attendanceSnap = await getDocs(attendanceQuery);
-    const attendanceRecords = attendanceSnap.docs.map(doc => ({...doc.data(), date: doc.data().date.toDate() } as AttendanceRecord & {date: Date}));
+    const attendanceRecords = attendanceSnap.docs.map(doc => {
+        const data = doc.data();
+        // Handle both Firestore Timestamp and JS Date objects
+        const date = data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date);
+        return {...data, date } as AttendanceRecord & {date: Date};
+    });
     
     if(attendanceRecords.length > 0) {
         const studentIdsInRecords = [...new Set(attendanceRecords.map(rec => rec.studentId))];
@@ -191,14 +199,54 @@ export default function RecordsPage() {
             fillColor: [245, 245, 245],
         },
         columnStyles: {
-            0: { cellWidth: 'auto' }, // SR#
-            1: { cellWidth: 'auto' }, // Student Name
-            2: { cellWidth: 'auto' }, // Roll No.
+           // Let autotable handle column widths automatically
+           0: { cellWidth: 'auto' }, // SR#
+           1: { cellWidth: 'auto' }, // Name
+           2: { cellWidth: 'auto' }, // Roll No.
         }
     });
 
     doc.save(`attendance_${selectedClassId}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
+
+  const handleClearRecords = async () => {
+    if(!firestore || !selectedClassId) return;
+
+    try {
+        const attendanceRef = collection(firestore, `courses/${selectedClassId}/attendance_records`);
+        const attendanceSnap = await getDocs(attendanceRef);
+
+        if (attendanceSnap.empty) {
+            toast({
+                title: "No Records to Clear",
+                description: "There are no attendance records for this class.",
+            });
+            return;
+        }
+
+        const batch = writeBatch(firestore);
+        attendanceSnap.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        await batch.commit();
+
+        setReportData(null); // Clear the UI
+        toast({
+            title: "Records Cleared",
+            description: `All attendance records for the class have been deleted.`,
+            className: 'bg-accent text-accent-foreground'
+        });
+
+    } catch (e) {
+        console.error("Error clearing attendance records: ", e);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not clear attendance records.",
+        });
+    }
+  }
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
@@ -273,6 +321,28 @@ export default function RecordsPage() {
                         Download PDF
                     </span>
                 </Button>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="destructive" className="h-8 gap-1">
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                                Clear Records
+                            </span>
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete all attendance records for this class.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleClearRecords}>Continue</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
               </div>
           </CardHeader>
           <CardContent>
@@ -321,7 +391,3 @@ export default function RecordsPage() {
     </main>
   );
 }
-
-    
-
-    
