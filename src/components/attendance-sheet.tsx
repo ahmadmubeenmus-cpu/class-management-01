@@ -127,6 +127,7 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
                     mode="single"
                     selected={attendanceDate}
                     onSelect={(date) => date && setAttendanceDate(date)}
+                    disabled={(date) => date > new Date()}
                     initialFocus
                     />
                 </PopoverContent>
