@@ -22,6 +22,14 @@ export function Dashboard() {
   const isAdmin = !!adminDoc;
   const isLoading = isUserLoading || isAdminLoading;
 
+  if (isLoading) {
+    return (
+        <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40">
+            <p>Verifying permissions...</p>
+        </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Header />
@@ -41,8 +49,7 @@ export function Dashboard() {
                 <FileText className="mr-2 h-4 w-4" />
                 Reports
               </TabsTrigger>
-              {/* Conditionally render the Admin tab based on user's role */}
-              {!isLoading && isAdmin && (
+              {isAdmin && (
                 <TabsTrigger value="admin">
                   <Users className="mr-2 h-4 w-4" />
                   Admin
@@ -59,7 +66,7 @@ export function Dashboard() {
           <TabsContent value="reports">
             <ReportsTab />
           </TabsContent>
-          {!isLoading && isAdmin && (
+          {isAdmin && (
             <TabsContent value="admin">
               <AdminTab />
             </TabsContent>

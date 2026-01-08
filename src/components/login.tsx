@@ -10,14 +10,14 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth, setDocumentNonBlocking } from '@/firebase';
+import { useAuth } from '@/firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { GraduationCap } from 'lucide-react';
-import { doc, getFirestore } from 'firebase/firestore';
+import { doc, getFirestore, setDoc, getDoc } from 'firebase/firestore';
 
 export function Login() {
   const auth = useAuth();
@@ -40,9 +40,11 @@ export function Login() {
     const email = getEmailFromUsername(username);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      // First, try to sign in
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       toast({ title: 'Signed in successfully' });
     } catch (signInError: any) {
+      // If sign in fails, check if it's because the user doesn't exist
       if (signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/user-not-found') {
         // User does not exist, so create them
         try {
@@ -53,21 +55,23 @@ export function Login() {
             description: 'First time login, creating your account...',
           });
           
-          // If this is the 'admin' user, create their document in the admins collection
+          // IMPORTANT: If this is the 'admin' user, create their document in the admins collection
+          // This is the crucial step to grant admin permissions
           if (username === 'admin') {
             const firestore = getFirestore();
             const adminDocRef = doc(firestore, 'admins', user.uid);
-            // Use setDocumentNonBlocking to create the admin profile
-            setDocumentNonBlocking(adminDocRef, {
+
+            await setDoc(adminDocRef, {
               id: user.uid,
               username: 'admin',
               firstName: 'Admin',
               lastName: 'User',
               role: 'super_admin'
-            }, {});
+            });
           }
 
         } catch (signUpError: any) {
+            // Handle errors during sign-up (e.g., weak password)
             toast({
                 variant: 'destructive',
                 title: 'Sign-up Failed',
@@ -75,7 +79,7 @@ export function Login() {
             });
         }
       } else {
-        // Handle other sign-in errors
+        // Handle other sign-in errors (e.g., wrong password)
         toast({
           variant: 'destructive',
           title: 'Authentication Error',
