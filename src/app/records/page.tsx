@@ -7,15 +7,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Download } from 'lucide-react';
 import type { Student, Course, AttendanceRecord } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, getDocs } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+
+interface StudentStats {
+    present: number;
+    absent: number;
+    total: number;
+    percentage: string;
+}
 
 interface TransformedData {
   students: Student[];
   dates: string[];
   recordsByStudent: Record<string, Record<string, string>>;
+  stats: Record<string, StudentStats>;
 }
 
 export default function RecordsPage() {
@@ -53,7 +64,7 @@ export default function RecordsPage() {
     const attendanceQuery = query(attendanceRef);
 
     const attendanceSnap = await getDocs(attendanceQuery);
-    const attendanceRecords = attendanceSnap.docs.map(doc => doc.data() as AttendanceRecord);
+    const attendanceRecords = attendanceSnap.docs.map(doc => ({...doc.data(), date: doc.data().date.toDate() } as AttendanceRecord & {date: Date}));
 
     if(attendanceRecords.length > 0) {
         const studentIds = [...new Set(attendanceRecords.map(rec => rec.studentId))];
@@ -63,13 +74,15 @@ export default function RecordsPage() {
         
         const dateSet = new Set<string>();
         const recordsByStudent: Record<string, Record<string, string>> = {};
+        const stats: Record<string, StudentStats> = {};
 
         students.forEach(student => {
             recordsByStudent[student.id] = {};
+            stats[student.id] = { present: 0, absent: 0, total: 0, percentage: '0.00' };
         });
         
         attendanceRecords.forEach(record => {
-            const dateStr = format(record.date.toDate(), 'yyyy-MM-dd');
+            const dateStr = format(record.date, 'yyyy-MM-dd');
             dateSet.add(dateStr);
             if (recordsByStudent[record.studentId]) {
                  recordsByStudent[record.studentId][dateStr] = record.status === 'present' ? 'P' : 'A';
@@ -78,10 +91,28 @@ export default function RecordsPage() {
 
         const sortedDates = Array.from(dateSet).sort((a,b) => new Date(a).getTime() - new Date(b).getTime());
 
+        // Calculate stats
+        students.forEach(student => {
+            let presentCount = 0;
+            sortedDates.forEach(date => {
+                if (recordsByStudent[student.id][date] === 'P') {
+                    presentCount++;
+                }
+            });
+            const totalDays = sortedDates.length;
+            stats[student.id] = {
+                present: presentCount,
+                absent: totalDays - presentCount,
+                total: totalDays,
+                percentage: totalDays > 0 ? ((presentCount / totalDays) * 100).toFixed(2) : '0.00'
+            };
+        });
+
         setReportData({
             students: students,
             dates: sortedDates,
             recordsByStudent: recordsByStudent,
+            stats: stats,
         });
 
     } else {
@@ -91,11 +122,11 @@ export default function RecordsPage() {
     setIsGenerating(false);
   };
 
-  const handleDownload = () => {
+  const handleDownloadCsv = () => {
     if (!reportData) return;
 
-    const { students, dates, recordsByStudent } = reportData;
-    const headers = ["SR#", "Student Name", "Roll No.", ...dates.map(d => format(new Date(d), 'dd-MMM-yy'))];
+    const { students, dates, recordsByStudent, stats } = reportData;
+    const headers = ["SR#", "Student Name", "Roll No.", ...dates.map(d => format(new Date(d), 'dd-MMM-yy')), "Attendance %"];
     const csvRows = [headers.join(",")];
     
     students.forEach((student, index) => {
@@ -108,6 +139,7 @@ export default function RecordsPage() {
             const status = recordsByStudent[student.id]?.[date] || '-';
             row.push(status);
         });
+        row.push(stats[student.id].percentage + '%');
         csvRows.push(row.join(","));
     });
 
@@ -121,6 +153,60 @@ export default function RecordsPage() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+  };
+  
+   const handleDownloadPdf = () => {
+    if (!reportData || !courses) return;
+
+    const doc = new jsPDF({
+        orientation: 'landscape'
+    });
+
+    const { students, dates, recordsByStudent, stats } = reportData;
+    const courseName = courses.find(c => c.id === selectedClassId)?.courseName;
+
+    doc.text(`Attendance Register: ${courseName}`, 14, 15);
+
+    const head = [["SR#", "Student Name", "Roll No.", ...dates.map(d => format(new Date(d), 'dd-MMM')), "Attendance %"]];
+    
+    const body = students.map((student, index) => {
+        const row = [
+            index + 1,
+            `${student.firstName} ${student.lastName}`,
+            student.studentId
+        ];
+        dates.forEach(date => {
+            row.push(recordsByStudent[student.id]?.[date] || '-');
+        });
+        row.push(stats[student.id].percentage + '%');
+        return row;
+    });
+
+    autoTable(doc, {
+        head: head,
+        body: body,
+        startY: 20,
+        theme: 'grid',
+        styles: {
+            fontSize: 8,
+            cellPadding: 1.5,
+        },
+        headStyles: {
+            fillColor: [41, 128, 185],
+            textColor: 255,
+            fontStyle: 'bold',
+        },
+        alternateRowStyles: {
+            fillColor: [245, 245, 245],
+        },
+        columnStyles: {
+            0: { cellWidth: 10 },
+            1: { cellWidth: 40 },
+            2: { cellWidth: 20 },
+        }
+    });
+
+    doc.save(`attendance_${selectedClassId}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   return (
@@ -183,12 +269,20 @@ export default function RecordsPage() {
                     Records for {courses?.find(c => c.id === selectedClassId)?.courseName}.
                 </CardDescription>
               </div>
-              <Button size="sm" variant="outline" className="h-8 gap-1" onClick={handleDownload}>
-                  <Download className="h-3.5 w-3.5" />
-                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                      Download CSV
-                  </span>
-              </Button>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" className="h-8 gap-1" onClick={handleDownloadCsv}>
+                    <Download className="h-3.5 w-3.5" />
+                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                        Download CSV
+                    </span>
+                </Button>
+                 <Button size="sm" variant="outline" className="h-8 gap-1" onClick={handleDownloadPdf}>
+                    <Download className="h-3.5 w-3.5" />
+                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                        Download PDF
+                    </span>
+                </Button>
+              </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -201,6 +295,7 @@ export default function RecordsPage() {
                         {reportData.dates.map(date => (
                             <TableHead key={date} className="text-center min-w-[120px]">{format(new Date(date), 'dd MMM, yy')}</TableHead>
                         ))}
+                        <TableHead className="sticky right-0 bg-background z-10 text-center min-w-[120px]">Attendance %</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -214,6 +309,9 @@ export default function RecordsPage() {
                                 {reportData.recordsByStudent[student.id]?.[date] || '-'}
                             </TableCell>
                         ))}
+                        <TableCell className="sticky right-0 bg-background z-10 font-medium text-center">
+                            {reportData.stats[student.id]?.percentage}%
+                        </TableCell>
                     </TableRow>
                     ))}
                 </TableBody>
