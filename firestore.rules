@@ -1,9 +1,61 @@
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+
+    // Helper function to check if a user is an admin
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Rules for the 'users' collection
+    match /users/{userId} {
+      // Allow create, read, update for the user who owns the document
+      allow create, read, update: if request.auth.uid == userId;
+      // Allow read, write for any admin
+      allow read, write: if isAdmin();
+      // Deny deletion by anyone for now to prevent accidental data loss
+      allow delete: if false;
+    }
+
+    // Rules for the 'admins' collection
+    match /admins/{adminId} {
+        // Admins can read/write their own profile
+        allow read, write: if request.auth.uid == adminId;
+    }
+    
+    // Rules for courses and their subcollections
+    match /courses/{courseId} {
+        // Only admins can create, update or delete courses
+        allow write: if isAdmin();
+        // Any authenticated user can read course information
+        allow read: if request.auth != null;
+
+        // Rules for enrolled students in a course
+        match /students/{studentId} {
+            // Admins can add/remove students from a course
+            allow write: if isAdmin();
+            // Any authenticated user can see who is enrolled in a course
+            allow read: if request.auth != null;
+        }
+
+        // Rules for attendance records
+        match /attendance_records/{recordId} {
+            // Any authenticated user can write attendance records
+            // (Permissions can be further refined by checking user roles in the 'users' collection)
+            allow write: if request.auth != null;
+            // Any authenticated user can read attendance records
+            allow read: if request.auth != null;
+        }
+    }
+
+    // Rules for the global students list
+    match /students/{studentId} {
+        // Only admins can manage the master list of students
+        allow write: if isAdmin();
+        // Any authenticated user can read the list of students (e.g., to enroll them)
+        allow read: if request.auth != null;
     }
   }
 }
