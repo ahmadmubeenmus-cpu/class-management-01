@@ -14,6 +14,7 @@ service cloud.firestore {
       allow create: if request.auth != null;
       allow read, update: if request.auth.uid == userId || isAdmin();
       allow delete: if isAdmin();
+      allow list: if isAdmin();
     }
 
     // Rules for the 'admins' collection
@@ -43,8 +44,8 @@ service cloud.firestore {
         allow read: if isAdmin() || (request.auth.token.firebase.sign_in_provider == "anonymous");
         
         // Allow an anonymously authenticated user to query for their own student document
-        // This is secure because they can only query by a specific `uid`, they cannot list all students.
-        allow list: if isAdmin() || (request.auth.token.firebase.sign_in_provider == "anonymous" && request.query.where[0][0] == "uid");
+        // This is secure because they can only query by a specific `rollNo`, they cannot list all students.
+        allow list: if isAdmin() || (request.auth.token.firebase.sign_in_provider == "anonymous" && request.query.where[0].fieldPath == "rollNo");
     }
     match /attendance_records/{recordId} {
       allow read, list: if request.auth != null;
