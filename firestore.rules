@@ -45,7 +45,7 @@ service cloud.firestore {
         
         // Allow an anonymously authenticated user to query for their own student document
         // This is secure because they can only query by a specific `rollNo`, they cannot list all students.
-        allow list: if isAdmin() || (request.auth.token.firebase.sign_in_provider == "anonymous" && request.query.where[0].fieldPath == "rollNo");
+        allow list: if request.auth != null || (request.auth.token.firebase.sign_in_provider == "anonymous" && request.query.where[0].fieldPath == "rollNo");
     }
     match /attendance_records/{recordId} {
       allow read, list: if request.auth != null;
