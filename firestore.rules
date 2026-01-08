@@ -86,7 +86,7 @@ service cloud.firestore {
      * @principle Enforces self-management for admin profile data.
      */
     match /admins/{adminId} {
-      allow get: if isAdmin() && isOwner(adminId);
+      allow get: if isOwner(adminId);
       allow create: if isOwner(adminId);
       allow update: if isAdmin() && isOwner(adminId) && isExistingDoc();
       allow list, delete: if false;
