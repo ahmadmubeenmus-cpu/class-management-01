@@ -8,12 +8,16 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps } from 'firebase-admin/app';
+import { initializeApp, getApps, App } from 'firebase-admin/app';
 
 // Initialize Firebase Admin SDK if not already initialized
+let adminApp: App;
 if (!getApps().length) {
-  initializeApp();
+  adminApp = initializeApp();
+} else {
+  adminApp = getApps()[0];
 }
+
 
 const CreateUserInputSchema = z.object({
   email: z.string().email(),
@@ -44,8 +48,8 @@ const createUserFlow = ai.defineFlow(
     outputSchema: CreateUserOutputSchema,
   },
   async (input) => {
-    const auth = getAuth();
-    const firestore = getFirestore();
+    const auth = getAuth(adminApp);
+    const firestore = getFirestore(adminApp);
 
     try {
       // 1. Create the user in Firebase Authentication
@@ -74,16 +78,11 @@ const createUserFlow = ai.defineFlow(
         success: true,
       };
     } catch (error: any) {
-      console.error('Error creating user:', error);
-      // Provide a more specific error message if available
-      const message = error.code === 'auth/email-already-exists'
-        ? 'A user with this email already exists.'
-        : error.message || 'An unknown error occurred.';
-      
       // We are re-throwing the error to surface it in the client toast
-      throw new Error(message);
+       if (error.code === 'auth/email-already-exists') {
+        throw new Error('A user with this email already exists.');
+      }
+      throw new Error(error.message || 'An unknown error occurred during user creation.');
     }
   }
 );
-
-    
