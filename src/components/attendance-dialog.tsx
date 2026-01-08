@@ -15,10 +15,7 @@ import type { Student, AttendanceStatus, Course } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
 import { collection, writeBatch, doc, Timestamp } from 'firebase/firestore';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { CalendarIcon } from 'lucide-react';
 import { Calendar } from './ui/calendar';
-import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
 
@@ -110,84 +107,67 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="max-w-2xl w-full"
-        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="max-w-4xl w-full"
         >
         <DialogHeader>
           <DialogTitle>Mark Attendance: {classInfo.courseName}</DialogTitle>
           <DialogDescription>
-            Select the date and mark the status for each student.
+            Select the date and mark the status for each student. Today's date is {format(new Date(), 'PPP')}.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="my-4 flex justify-between items-center gap-2">
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button
-                    variant={"outline"}
-                    className={cn(
-                        "w-[280px] justify-start text-left font-normal",
-                        !attendanceDate && "text-muted-foreground"
-                    )}
-                    >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {attendanceDate ? format(attendanceDate, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                    <Calendar
-                        mode="single"
-                        selected={attendanceDate}
-                        onSelect={setAttendanceDate}
-                        disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                        initialFocus
-                    />
-                </PopoverContent>
-            </Popover>
-            <div className='flex gap-2'>
-                <Button variant="outline" size="sm" onClick={() => markAll('present')}>Mark All Present</Button>
-                <Button variant="outline" size="sm" onClick={() => markAll('absent')}>Mark All Absent</Button>
+        <div className="grid md:grid-cols-2 gap-8 my-4">
+            <div>
+                <Calendar
+                    mode="single"
+                    selected={attendanceDate}
+                    onSelect={setAttendanceDate}
+                    disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                    className="rounded-md border"
+                />
+            </div>
+            <div className='flex flex-col gap-4'>
+                <div className='flex justify-end gap-2'>
+                    <Button variant="outline" size="sm" onClick={() => markAll('present')}>Mark All Present</Button>
+                    <Button variant="outline" size="sm" onClick={() => markAll('absent')}>Mark All Absent</Button>
+                </div>
+                <div className="overflow-y-auto border rounded-md" style={{maxHeight: 'calc(100vh - 450px)'}}>
+                <Table>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead>Student</TableHead>
+                    <TableHead className='text-center'>Present</TableHead>
+                    <TableHead className='text-center'>Absent</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {classInfo.students.map((student) => (
+                    <TableRow key={student.id}>
+                        <TableCell>
+                        <div className="font-medium">{student.firstName} {student.lastName}</div>
+                        <div className="text-sm text-muted-foreground">{student.studentId}</div>
+                        </TableCell>
+                        <RadioGroup 
+                            defaultValue="present" 
+                            className="contents"
+                            onValueChange={(value) => handleStatusChange(student.id, value as AttendanceStatus)}
+                            value={attendance[student.id]}
+                        >
+                            <TableCell className="text-center">
+                                <RadioGroupItem value="present" id={`${student.id}-present`} />
+                            </TableCell>
+                            <TableCell className="text-center">
+                                <RadioGroupItem value="absent" id={`${student.id}-absent`} />
+                            </TableCell>
+                        </RadioGroup>
+                    </TableRow>
+                    ))}
+                </TableBody>
+                </Table>
+                </div>
             </div>
         </div>
 
-        <div className="overflow-y-auto" style={{maxHeight: 'calc(100vh - 350px)'}}>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[50px]">SR#</TableHead>
-              <TableHead>Student Name</TableHead>
-              <TableHead>Roll No.</TableHead>
-              <TableHead className='text-center'>Present</TableHead>
-              <TableHead className='text-center'>Absent</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {classInfo.students.map((student, index) => (
-              <TableRow key={student.id}>
-                <TableCell>{index + 1}</TableCell>
-                <TableCell>
-                  <div className="font-medium">{student.firstName} {student.lastName}</div>
-                  <div className="text-sm text-muted-foreground">{student.email}</div>
-                </TableCell>
-                <TableCell>{student.studentId}</TableCell>
-                <RadioGroup 
-                    defaultValue="present" 
-                    className="contents"
-                    onValueChange={(value) => handleStatusChange(student.id, value as AttendanceStatus)}
-                    value={attendance[student.id]}
-                >
-                    <TableCell className="text-center">
-                        <RadioGroupItem value="present" id={`${student.id}-present`} />
-                    </TableCell>
-                    <TableCell className="text-center">
-                        <RadioGroupItem value="absent" id={`${student.id}-absent`} />
-                    </TableCell>
-                </RadioGroup>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        </div>
         <DialogFooter className='mt-4'>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSave}>Save Attendance</Button>
