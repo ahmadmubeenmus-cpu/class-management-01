@@ -14,7 +14,7 @@ import type { Student, Course } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface ViewStudentsDialogProps {
   classInfo: Course & { students: Student[] };
@@ -26,6 +26,13 @@ export function ViewStudentsDialog({ classInfo, open, onOpenChange }: ViewStuden
   const { toast } = useToast();
   const firestore = useFirestore();
   const [students, setStudents] = useState(classInfo.students);
+  
+  // Keep local state in sync with prop changes
+  useEffect(() => {
+    const sortedStudents = [...classInfo.students].sort((a, b) => (a.studentId || "").localeCompare(b.studentId || ""));
+    setStudents(sortedStudents);
+  }, [classInfo.students]);
+
 
   const handleRemoveStudent = async (studentId: string) => {
     if (!firestore) return;

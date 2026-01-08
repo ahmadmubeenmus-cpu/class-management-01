@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -32,22 +32,16 @@ export function EnrollStudentDialog({ course, open, onOpenChange }: EnrollStuden
   
   const [unenrolledStudents, setUnenrolledStudents] = useState<Student[]>([]);
 
+  const enrolledStudentIds = useMemo(() => new Set(course.students.map(s => s.id)), [course.students]);
+
   useEffect(() => {
-    if (!open || !allStudents || !firestore) return;
+    if (!open || !allStudents) return;
 
-    const getEnrolledStudentIds = async () => {
-        const enrollmentRef = collection(firestore, `courses/${course.id}/students`);
-        const enrollmentSnapshot = await getDocs(enrollmentRef);
-        return enrollmentSnapshot.docs.map(d => d.id);
-    };
+    const unenrolled = allStudents.filter(student => !enrolledStudentIds.has(student.id));
+    unenrolled.sort((a, b) => (a.studentId || "").localeCompare(b.studentId || ""));
+    setUnenrolledStudents(unenrolled);
 
-    getEnrolledStudentIds().then(enrolledIds => {
-        const unenrolled = allStudents.filter(student => !enrolledIds.includes(student.id));
-        unenrolled.sort((a, b) => (a.studentId || "").localeCompare(b.studentId || ""));
-        setUnenrolledStudents(unenrolled);
-    });
-
-  }, [open, allStudents, course.id, firestore]);
+  }, [open, allStudents, enrolledStudentIds]);
 
   const handleEnrollStudent = async (studentId: string) => {
     if (!firestore) return;
@@ -153,7 +147,7 @@ export function EnrollStudentDialog({ course, open, onOpenChange }: EnrollStuden
             </TableBody>
           </Table>
         </div>
-        <DialogFooter className="justify-between">
+        <DialogFooter className="justify-between sm:justify-between">
           <div>
             {unenrolledStudents.length > 0 &&
                 <Button onClick={handleEnrollAll}>Enroll All</Button>

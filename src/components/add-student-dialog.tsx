@@ -46,30 +46,36 @@ export function AddStudentDialog({ open, onOpenChange, courseId }: AddStudentDia
 
     const studentsCol = collection(firestore, 'students');
     try {
-      const newStudentRef = await addDocumentNonBlocking(studentsCol, {
-          studentId,
-          firstName,
-          lastName,
-          email,
+      const newStudentRef = doc(studentsCol); // create a ref with an auto-generated ID
+      
+      // 1. Create student document
+      await setDocumentNonBlocking(newStudentRef, {
+        id: newStudentRef.id,
+        studentId,
+        firstName,
+        lastName,
+        email,
+      }, {});
+
+      // 2. Enroll the student in the course
+      const courseStudentRef = doc(firestore, `courses/${courseId}/students/${newStudentRef.id}`);
+      await setDocumentNonBlocking(courseStudentRef, {
+        studentId: newStudentRef.id,
+        courseId: courseId
+      }, {});
+      
+      toast({
+        title: 'Student Added & Enrolled',
+        description: 'The new student has been successfully created and enrolled in the class.',
+        className: 'bg-accent text-accent-foreground'
       });
+      
+      onOpenChange(false);
+      setStudentId('');
+      setFirstName('');
+      setLastName('');
+      setEmail('');
 
-      if (newStudentRef) {
-          // Update the student with its own ID
-          await updateDocumentNonBlocking(newStudentRef, { id: newStudentRef.id });
-
-          // Enroll the student in the course
-          const courseStudentRef = doc(firestore, `courses/${courseId}/students/${newStudentRef.id}`);
-          await setDocumentNonBlocking(courseStudentRef, {
-            studentId: newStudentRef.id,
-            courseId: courseId
-          }, {});
-
-          toast({
-            title: 'Student Added & Enrolled',
-            description: 'The new student has been successfully created and enrolled in the class.',
-            className: 'bg-accent text-accent-foreground'
-          });
-      }
     } catch(e) {
        toast({
             variant: "destructive",
@@ -77,13 +83,6 @@ export function AddStudentDialog({ open, onOpenChange, courseId }: AddStudentDia
             description: "Failed to add student.",
         });
     }
-
-    
-    onOpenChange(false);
-    setStudentId('');
-    setFirstName('');
-    setLastName('');
-    setEmail('');
   };
 
   return (

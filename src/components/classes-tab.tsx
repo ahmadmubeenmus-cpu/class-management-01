@@ -46,13 +46,11 @@ export function ClassesTab() {
       return [];
     }
 
-    const studentsList: Student[] = [];
-    const studentDocsQuery = query(collection(firestore, 'students'), where('id', 'in', studentIds.slice(0, 30))); // Firestore 'in' query limit
+    // Firestore 'in' query is limited to 30 items in Firebase JS SDK v9, handle chunks if needed
+    const studentDocsQuery = query(collection(firestore, 'students'), where('id', 'in', studentIds.slice(0, 30))); 
     const studentDocsSnapshot = await getDocs(studentDocsQuery);
     
-    studentDocsSnapshot.forEach(doc => {
-        studentsList.push({ id: doc.id, ...doc.data() } as Student);
-    });
+    const studentsList: Student[] = studentDocsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
     
     studentsList.sort((a, b) => (a.studentId || "").localeCompare(b.studentId || ""));
 
@@ -61,27 +59,48 @@ export function ClassesTab() {
 
   const handleMarkAttendance = async (classItem: Course) => {
     const studentsList = await fetchEnrolledStudents(classItem.id);
-    const classWithStudents: CourseWithStudents = { ...classItem, students: studentsList };
-    setSelectedClass(classWithStudents);
+    setSelectedClass({ ...classItem, students: studentsList });
     setIsSheetOpen(true);
   };
+  
+  const handleCloseAttendanceSheet = () => {
+    setIsSheetOpen(false);
+    setSelectedClass(null);
+  }
 
   const handleViewStudents = async (classItem: Course) => {
     const studentsList = await fetchEnrolledStudents(classItem.id);
     setSelectedClass({ ...classItem, students: studentsList });
     setIsStudentsDialogOpen(true);
   }
+  
+  const handleCloseViewStudents = () => {
+    setIsStudentsDialogOpen(false);
+    setSelectedClass(null);
+  }
 
   const handleAddStudent = (classItem: Course) => {
-    setSelectedClass({ ...classItem, students: [] });
+    setSelectedClass({ ...classItem, students: [] }); // students array is empty as it's not needed here
     setIsAddStudentDialogOpen(true);
   }
 
-  const handleEnrollStudent = (classItem: Course) => {
-    setSelectedClass({ ...classItem, students: [] });
+  const handleCloseAddStudent = () => {
+    setIsAddStudentDialogOpen(false);
+    setSelectedClass(null);
+  }
+
+
+  const handleEnrollStudent = async (classItem: Course) => {
+    const studentsList = await fetchEnrolledStudents(classItem.id);
+    setSelectedClass({ ...classItem, students: studentsList });
     setIsEnrollStudentDialogOpen(true);
   }
   
+  const handleCloseEnrollStudent = () => {
+    setIsEnrollStudentDialogOpen(false);
+    setSelectedClass(null);
+  }
+
   return (
     <>
       <div className="flex items-center justify-between gap-2 mt-4">
@@ -144,31 +163,31 @@ export function ClassesTab() {
           </Table>
         </CardContent>
       </Card>
-      {selectedClass && (
+      {selectedClass && isSheetOpen && (
         <AttendanceSheet 
             classInfo={selectedClass} 
             open={isSheetOpen}
-            onOpenChange={setIsSheetOpen}
+            onOpenChange={handleCloseAttendanceSheet}
         />
       )}
-       {selectedClass && (
+       {selectedClass && isStudentsDialogOpen && (
         <ViewStudentsDialog
             classInfo={selectedClass}
             open={isStudentsDialogOpen}
-            onOpenChange={setIsStudentsDialogOpen}
+            onOpenChange={handleCloseViewStudents}
         />
       )}
-      {selectedClass && (
+      {selectedClass && isAddStudentDialogOpen && (
         <AddStudentDialog
             open={isAddStudentDialogOpen}
-            onOpenChange={setIsAddStudentDialogOpen}
+            onOpenChange={handleCloseAddStudent}
             courseId={selectedClass.id}
         />
       )}
-      {selectedClass && (
+      {selectedClass && isEnrollStudentDialogOpen && (
         <EnrollStudentDialog
             open={isEnrollStudentDialogOpen}
-            onOpenChange={setIsEnrollStudentDialogOpen}
+            onOpenChange={handleCloseEnrollStudent}
             course={selectedClass}
         />
       )}

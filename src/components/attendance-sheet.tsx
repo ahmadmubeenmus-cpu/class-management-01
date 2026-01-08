@@ -63,7 +63,7 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
         const attendanceCollectionRef = collection(firestore, `courses/${classInfo.id}/attendance_records`);
 
         Object.entries(attendance).forEach(([studentId, status]) => {
-            const newRecordRef = doc(attendanceCollectionRef);
+            const newRecordRef = doc(attendanceCollectionRef); // Auto-generates an ID
             batch.set(newRecordRef, {
                 id: newRecordRef.id,
                 studentId: studentId,
