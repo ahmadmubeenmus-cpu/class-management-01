@@ -1,3 +1,4 @@
+'use client';
 import { Header } from '@/components/header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DashboardTab } from '@/components/dashboard-tab';
@@ -5,14 +6,21 @@ import { ClassesTab } from '@/components/classes-tab';
 import { ReportsTab } from '@/components/reports-tab';
 import { LayoutDashboard, BookUser, FileText, Users } from 'lucide-react';
 import { AdminTab } from './admin-tab';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc, DocumentData } from 'firebase/firestore';
 
 export function Dashboard() {
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
 
-  // Determine if the user is an admin based on their email.
-  const isAdmin = user?.email === 'admin@example.com';
-  const isLoading = isUserLoading;
+  const adminRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'admins', user.uid) : null),
+    [user, firestore]
+  );
+  const { data: adminDoc, isLoading: isAdminLoading } = useDoc<DocumentData>(adminRef);
+
+  const isAdmin = !!adminDoc;
+  const isLoading = isUserLoading || isAdminLoading;
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -51,7 +59,7 @@ export function Dashboard() {
           <TabsContent value="reports">
             <ReportsTab />
           </TabsContent>
-          {isAdmin && (
+          {!isLoading && isAdmin && (
             <TabsContent value="admin">
               <AdminTab />
             </TabsContent>

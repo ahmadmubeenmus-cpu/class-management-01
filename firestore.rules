@@ -11,8 +11,10 @@
  * layout enables intuitive, path-based security and performant queries.
  *
  * Key Security Decisions:
- * - Role by Email: An admin is identified by the email 'admin@example.com'. This simplifies
- *   role checking and removes the need for a separate database read to verify roles.
+ * - Role by Document Existence: A user is an 'Admin' if a document with their UID
+ *   exists in the `/admins` collection. A user is a 'User' if a document
+ *   with their UID exists in the `/users` collection. This is a scalable and secure
+ *   way to manage roles without relying on custom claims or hardcoded values.
  * - Granular Permissions: 'Users' can create attendance records, but only 'Admins'
  *   can modify or delete them, ensuring data integrity and providing an audit trail.
  */
@@ -33,10 +35,10 @@ service cloud.firestore {
 
     /**
      * Checks if the currently authenticated user is an administrator by verifying
-     * their email address.
+     * the existence of their UID in the /admins collection.
      */
     function isAdmin() {
-      return isSignedIn() && request.auth.token.email == 'admin@example.com';
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
     /**
@@ -79,8 +81,8 @@ service cloud.firestore {
     /**
      * @description Admin profiles. Only accessible by admins themselves.
      * @path /admins/{adminId}
-     * @allow (get) An admin can read their own profile.
-     * @allow (create, update) An admin can create or update their own profile.
+     * @allow (get, update) An admin can read or update their own profile.
+     * @allow (create) An admin can create their own profile document.
      * @deny (list, delete) No one can list or delete admin profiles.
      * @principle Enforces self-management for admin profile data.
      */

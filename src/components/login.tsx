@@ -44,13 +44,20 @@ export function Login() {
       toast({ title: 'Signed in successfully' });
     } catch (signInError: any) {
       if (signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/user-not-found') {
+        // User does not exist, so create them
         try {
           const userCredential = await createUserWithEmailAndPassword(auth, email, password);
           const user = userCredential.user;
+          toast({
+            title: 'Account created',
+            description: 'First time login, creating your account...',
+          });
           
+          // If this is the 'admin' user, create their document in the admins collection
           if (username === 'admin') {
             const firestore = getFirestore();
             const adminDocRef = doc(firestore, 'admins', user.uid);
+            // Use setDocumentNonBlocking to create the admin profile
             setDocumentNonBlocking(adminDocRef, {
               id: user.uid,
               username: 'admin',
@@ -60,18 +67,15 @@ export function Login() {
             }, {});
           }
 
-          toast({
-            title: 'Account created',
-            description: 'Signed in successfully.',
-          });
         } catch (signUpError: any) {
             toast({
                 variant: 'destructive',
-                title: 'Login Failed',
+                title: 'Sign-up Failed',
                 description: signUpError.message || 'An unknown error occurred during sign up.',
             });
         }
       } else {
+        // Handle other sign-in errors
         toast({
           variant: 'destructive',
           title: 'Authentication Error',
