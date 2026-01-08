@@ -16,7 +16,7 @@ import { AddClassDialog } from './add-class-dialog';
 import { BulkUploadDialog } from './bulk-upload-dialog';
 import { AttendanceSheet } from './attendance-sheet';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import type { Course, Student } from '@/lib/types';
 
 
@@ -33,9 +33,16 @@ export function ClassesTab() {
   const [selectedClass, setSelectedClass] = useState<CourseWithStudents | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  const handleMarkAttendance = (classItem: Course) => {
-    // This is a placeholder. We will fetch students for the class later.
-    const classWithStudents: CourseWithStudents = { ...classItem, students: [] };
+  const handleMarkAttendance = async (classItem: Course) => {
+    if (!firestore) return;
+    
+    // Fetch all students for now.
+    // In a real app, you'd fetch students enrolled in the specific class.
+    const studentsCollection = collection(firestore, 'students');
+    const studentsSnapshot = await getDocs(studentsCollection);
+    const studentsList = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+    
+    const classWithStudents: CourseWithStudents = { ...classItem, students: studentsList };
     setSelectedClass(classWithStudents);
     setIsSheetOpen(true);
   };

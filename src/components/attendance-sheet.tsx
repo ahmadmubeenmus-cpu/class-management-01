@@ -13,6 +13,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import type { Student, AttendanceStatus, Course } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore } from '@/firebase';
+import { collection, writeBatch, doc, Timestamp } from 'firebase/firestore';
+
 
 interface AttendanceSheetProps {
   classInfo: Course & { students: Student[] };
@@ -24,6 +27,7 @@ type StudentAttendanceState = Record<string, AttendanceStatus>;
 
 export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceSheetProps) {
   const { toast } = useToast();
+  const firestore = useFirestore();
   const [attendance, setAttendance] = useState<StudentAttendanceState>(() => {
     const initialState: StudentAttendanceState = {};
     classInfo.students.forEach(student => {
@@ -44,15 +48,48 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
     setAttendance(newState);
   };
   
-  const handleSave = () => {
-    // Logic to save attendance data to Firestore
-    console.log('Saving attendance:', attendance);
-    toast({
-      title: 'Attendance Saved',
-      description: `Attendance for ${classInfo.courseName} has been recorded.`,
-      className: 'bg-accent text-accent-foreground',
-    });
-    onOpenChange(false);
+  const handleSave = async () => {
+    if (!firestore) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not connect to the database.",
+        });
+        return;
+    }
+
+    try {
+        const batch = writeBatch(firestore);
+        const attendanceCollectionRef = collection(firestore, `courses/${classInfo.id}/attendance_records`);
+
+        Object.entries(attendance).forEach(([studentId, status]) => {
+            const newRecordRef = doc(attendanceCollectionRef);
+            batch.set(newRecordRef, {
+                id: newRecordRef.id,
+                studentId: studentId,
+                courseId: classInfo.id,
+                date: Timestamp.now(),
+                status: status,
+                markedBy: "admin", // Placeholder for user who marked attendance
+            });
+        });
+
+        await batch.commit();
+        
+        toast({
+          title: 'Attendance Saved',
+          description: `Attendance for ${classInfo.courseName} has been recorded.`,
+          className: 'bg-accent text-accent-foreground',
+        });
+        onOpenChange(false);
+    } catch (error) {
+        console.error("Error saving attendance: ", error);
+        toast({
+            variant: "destructive",
+            title: 'Save Failed',
+            description: 'An error occurred while saving attendance records.',
+        });
+    }
   };
 
   return (
