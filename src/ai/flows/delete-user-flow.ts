@@ -7,7 +7,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { initializeApp, getApps, App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
@@ -27,11 +27,11 @@ export type DeleteUserOutput = z.infer<typeof DeleteUserOutputSchema>;
 
 // Initialize Firebase Admin SDK if it hasn't been already.
 // This ensures we have a single, configured instance.
-let adminApp;
+let adminApp: App;
 if (!getApps().length) {
     adminApp = initializeApp();
 } else {
-    adminApp = getApps()[0];
+    adminApp = getApps()[0]!;
 }
 
 
@@ -57,9 +57,12 @@ const deleteUserFlow = ai.defineFlow(
       // Step 1: Delete the user from Firebase Authentication
       await auth.deleteUser(userId);
 
-      // Step 2: Delete the user's document from Firestore
+      // Step 2: Delete the user's document from Firestore if it exists
       const userDocRef = firestore.collection('users').doc(userId);
-      await userDocRef.delete();
+      const userDoc = await userDocRef.get();
+      if(userDoc.exists) {
+        await userDocRef.delete();
+      }
 
       return {
         success: true,
@@ -76,7 +79,6 @@ const deleteUserFlow = ai.defineFlow(
         errorMessage = error.message;
       }
       
-      // It's important to throw the error so the client-side `catch` block can handle it.
       throw new Error(errorMessage);
     }
   }
