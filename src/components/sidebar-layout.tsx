@@ -14,7 +14,7 @@ export function SidebarLayout({
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const { user, isLoading } = useUser();
+  const { user, isAdmin, isLoading } = useUser();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -26,15 +26,22 @@ export function SidebarLayout({
   }, []);
 
   useEffect(() => {
-    // Don't run this logic on the login page or if it's still loading
-    if (isLoading || pathname === '/login') {
-        return;
+    if (isLoading) {
+        return; // Wait until auth state is resolved
     }
-    // If not loading and no user, redirect to login
-    if (!user) {
+
+    if (!user && pathname !== '/login') {
       router.push('/login');
+    } else if (user && pathname === '/login') {
+      router.push('/dashboard');
     }
-  }, [user, isLoading, router, pathname]);
+
+    // Protect admin route
+    if (pathname.startsWith('/admin') && !isAdmin) {
+        router.push('/dashboard');
+    }
+
+  }, [user, isAdmin, isLoading, router, pathname]);
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(prevState => {

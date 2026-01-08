@@ -10,12 +10,14 @@ export interface UserContextValue {
   user: FirebaseUser | null;
   userProfile: UserProfile | null;
   isLoading: boolean;
+  isAdmin: boolean;
 }
 
 const UserContext = createContext<UserContextValue>({
     user: null,
     userProfile: null,
     isLoading: true,
+    isAdmin: false,
 });
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
@@ -26,7 +28,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
     useEffect(() => {
         if (!auth) {
-            setIsLoading(false); // If no auth provider, stop loading
+            setIsLoading(false);
             return;
         }
 
@@ -38,17 +40,30 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         return () => unsubscribe();
     }, [auth]);
 
-    const userProfileRef = useMemoFirebase(() => {
+    // Check for admin profile first
+    const adminProfileRef = useMemoFirebase(() => {
         if (!firestore || !user?.uid) return null;
         return doc(firestore, 'admins', user.uid);
     }, [firestore, user?.uid]);
     
+    const { data: adminProfile } = useDoc<UserProfile>(adminProfileRef);
+
+    // If not an admin, check for a regular user profile
+    const userProfileRef = useMemoFirebase(() => {
+        if (!firestore || !user?.uid || adminProfile) return null;
+        return doc(firestore, 'users', user.uid);
+    }, [firestore, user?.uid, adminProfile]);
+
     const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+
+    const finalUserProfile = adminProfile ?? userProfile ?? null;
+    const isAdmin = !!adminProfile;
 
     const value = {
         user,
-        userProfile: userProfile ?? null,
-        isLoading: isLoading
+        userProfile: finalUserProfile,
+        isLoading: isLoading,
+        isAdmin: isAdmin
     };
 
     return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

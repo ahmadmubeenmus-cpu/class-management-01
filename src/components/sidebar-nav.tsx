@@ -5,19 +5,36 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { LayoutDashboard, BookUser, Users, School, Database, User, UserCog } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { useUser } from "@/firebase/auth/use-user";
 
-const navItems = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+const allNavItems = [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, requiredPermission: 'canViewDashboard' },
     { href: "/classes", label: "Classes", icon: School },
     { href: "/students", label: "Students", icon: Users },
-    { href: "/attendance", label: "Attendance", icon: BookUser },
-    { href: "/records", label: "Records", icon: Database },
+    { href: "/attendance", label: "Attendance", icon: BookUser, requiredPermission: 'canMarkAttendance' },
+    { href: "/records", label: "Records", icon: Database, requiredPermission: 'canViewRecords' },
     { href: "/profile", label: "Profile", icon: UserCog },
-    { href: "/admin", label: "Admin", icon: User },
+    { href: "/admin", label: "Admin", icon: User, adminOnly: true },
 ]
 
 export function SidebarNav({ onLinkClick, isCollapsed }: { onLinkClick?: () => void, isCollapsed?: boolean }) {
   const pathname = usePathname();
+  const { isAdmin, userProfile } = useUser();
+
+  const navItems = allNavItems.filter(item => {
+    if (item.adminOnly) {
+        return isAdmin;
+    }
+    if (isAdmin) {
+        return true; // Admins see everything
+    }
+    if (item.requiredPermission) {
+        return userProfile?.permissions?.[item.requiredPermission as keyof typeof userProfile.permissions] ?? false;
+    }
+    // Items without specific permissions are visible to non-admins by default
+    // unless they are adminOnly
+    return true;
+  })
 
   return (
     <TooltipProvider>
