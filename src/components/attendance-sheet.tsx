@@ -124,15 +124,16 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
                 </TableCell>
                 <RadioGroup 
                     defaultValue="present" 
-                    className="flex items-center justify-around" 
+                    className="contents"
                     onValueChange={(value) => handleStatusChange(student.id, value as AttendanceStatus)}
                     value={attendance[student.id]}
                 >
-                    {(['present', 'absent'] as AttendanceStatus[]).map(status => (
-                        <TableCell key={status} className="text-center">
-                            <RadioGroupItem value={status} id={`${student.id}-${status}`} />
-                        </TableCell>
-                    ))}
+                    <TableCell className="text-center">
+                        <RadioGroupItem value="present" id={`${student.id}-present`} />
+                    </TableCell>
+                    <TableCell className="text-center">
+                        <RadioGroupItem value="absent" id={`${student.id}-absent`} />
+                    </TableCell>
                 </RadioGroup>
               </TableRow>
             ))}
