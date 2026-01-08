@@ -46,7 +46,7 @@ export default function LoginPage() {
                 </div>
             </CardHeader>
             <CardHeader>
-                <CardTitle className="text-2xl">Admin/Faculty Login</CardTitle>
+                <CardTitle className="text-2xl">CR/GR Login</CardTitle>
                 <CardDescription>Enter your credentials to access your account.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">

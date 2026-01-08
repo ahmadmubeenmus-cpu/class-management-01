@@ -25,11 +25,9 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <FirebaseClientProvider>
             <UserProvider>
-              <div className="flex min-h-screen w-full flex-col bg-muted/40">
                 <SidebarLayout>
                   {children}
                 </SidebarLayout>
-              </div>
             </UserProvider>
         </FirebaseClientProvider>
         <Toaster />

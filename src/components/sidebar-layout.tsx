@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 import { useUser } from "@/firebase/auth/use-user";
 import Loading from "@/app/loading";
 
+const NO_LAYOUT_ROUTES = ['/login', '/student/login', '/student/attendance'];
+
 export function SidebarLayout({
   children,
 }: {
@@ -15,12 +17,14 @@ export function SidebarLayout({
   const router = useRouter();
   const pathname = usePathname();
 
+  const isLayoutRequired = !NO_LAYOUT_ROUTES.includes(pathname);
+
   useEffect(() => {
     if (isLoading) {
         return; // Wait until auth state is resolved
     }
 
-    if (!user && pathname !== '/login') {
+    if (!user && isLayoutRequired) {
       router.push('/login');
     } else if (user && pathname === '/login') {
       router.push('/dashboard');
@@ -31,27 +35,27 @@ export function SidebarLayout({
         router.push('/dashboard');
     }
 
-  }, [user, isAdmin, isLoading, router, pathname]);
+  }, [user, isAdmin, isLoading, router, pathname, isLayoutRequired]);
 
   // If it's a protected route and we're still checking auth, show loading
-  if (isLoading && pathname !== '/login') {
+  if (isLoading && isLayoutRequired) {
     return <Loading />;
   }
   
   // If it's a protected route and the user is not logged in,
   // we show a loading screen while the redirect happens.
-  if (!user && pathname !== '/login') {
+  if (!user && isLayoutRequired) {
     return <Loading />;
   }
   
-  // Render login page without the sidebar layout
-  if (pathname === '/login') {
+  // Render pages without the sidebar layout
+  if (!isLayoutRequired) {
     return <>{children}</>;
   }
 
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1 bg-muted/40 min-h-screen w-full">
         <Header />
         {children}
     </div>

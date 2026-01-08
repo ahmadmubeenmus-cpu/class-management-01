@@ -90,7 +90,7 @@ export default function StudentLoginPage() {
                     {isLoading ? 'Signing In...' : 'Sign In'}
                 </Button>
                 <Link href="/login" className="text-sm text-center text-muted-foreground hover:underline">
-                    Are you an admin or faculty?
+                    Are you a CR/GR?
                 </Link>
             </CardFooter>
         </Card>
