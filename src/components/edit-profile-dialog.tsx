@@ -28,6 +28,7 @@ export function EditProfileDialog() {
   const adminRef = useMemoFirebase(() => user ? doc(firestore, 'admins', user.uid) : null, [user, firestore]);
   const { data: adminData } = useDoc<DocumentData>(adminRef);
   
+  const [username, setUsername] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
@@ -35,6 +36,7 @@ export function EditProfileDialog() {
 
   useEffect(() => {
     if (adminData) {
+      setUsername(adminData.username || '');
       setFirstName(adminData.firstName || '');
       setLastName(adminData.lastName || '');
     }
@@ -44,8 +46,8 @@ export function EditProfileDialog() {
   const handleSave = async () => {
     if (!user || !adminRef) return;
 
-    // Update name
-    updateDocumentNonBlocking(adminRef, { firstName, lastName });
+    // Update profile data
+    updateDocumentNonBlocking(adminRef, { username, firstName, lastName });
     
     // Update password if fields are filled and match
     if (password) {
@@ -88,6 +90,10 @@ export function EditProfileDialog() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+             <div className="grid gap-2">
+                <Label htmlFor="username">Username</Label>
+                <Input id="username" value={username} onChange={e => setUsername(e.target.value)} />
+            </div>
             <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                     <Label htmlFor="firstName">First Name</Label>
@@ -97,10 +103,6 @@ export function EditProfileDialog() {
                     <Label htmlFor="lastName">Last Name</Label>
                     <Input id="lastName" value={lastName} onChange={e => setLastName(e.target.value)} />
                 </div>
-            </div>
-             <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" value={user?.email || ''} disabled />
             </div>
              <div className="grid gap-2">
                 <Label htmlFor="password">New Password</Label>

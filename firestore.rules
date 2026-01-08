@@ -11,10 +11,8 @@
  * layout enables intuitive, path-based security and performant queries.
  *
  * Key Security Decisions:
- * - Admin by Email: A user is considered an admin if their email is 'admin@example.com'.
- *   This is a simple and effective method for a demo application.
- * - Role-Based Authorization: Other users' roles are determined by the existence of their
- *   UID as a document ID in the /users collection.
+ * - Role by Document: A user's role is determined by the existence of their UID
+ *   as a document ID in the /admins or /users collections.
  * - Granular Permissions: 'Users' can create attendance records, but only 'Admins'
  *   can modify or delete them, ensuring data integrity and providing an audit trail.
  */
@@ -35,10 +33,10 @@ service cloud.firestore {
 
     /**
      * Checks if the currently authenticated user is an administrator by verifying
-     * their email address.
+     * the existence of their user UID in the /admins collection.
      */
     function isAdmin() {
-      return isSignedIn() && request.auth.token.email == 'admin@example.com';
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
     /**
@@ -88,7 +86,9 @@ service cloud.firestore {
      * @principle Enforces self-management for admin profile data.
      */
     match /admins/{adminId} {
-      allow get, create, update: if isAdmin() && isOwner(adminId);
+      allow get: if isAdmin() && isOwner(adminId);
+      allow create: if isOwner(adminId);
+      allow update: if isAdmin() && isOwner(adminId) && isExistingDoc();
       allow list, delete: if false;
     }
 
@@ -104,7 +104,6 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
-      // Allow creation if the user is creating their OWN document, or if an admin is creating for someone else.
       allow create: if isOwner(userId) || isAdmin();
       allow update: if isAdmin() && isExistingDoc() && request.resource.data.id == resource.data.id;
       allow delete: if isAdmin() && isExistingDoc();

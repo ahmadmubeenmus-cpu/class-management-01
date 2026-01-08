@@ -10,6 +10,10 @@
           "type": "string",
           "description": "Unique identifier for the Admin entity."
         },
+        "username": {
+          "type": "string",
+          "description": "Username of the administrator."
+        },
         "firstName": {
           "type": "string",
           "description": "First name of the administrator."
@@ -18,11 +22,6 @@
           "type": "string",
           "description": "Last name of the administrator."
         },
-        "email": {
-          "type": "string",
-          "description": "Email address of the administrator.",
-          "format": "email"
-        },
         "role": {
           "type": "string",
           "description": "Role of the admin user within the system (e.g., super_admin, admin)."
@@ -30,9 +29,9 @@
       },
       "required": [
         "id",
+        "username",
         "firstName",
         "lastName",
-        "email",
         "role"
       ]
     },
@@ -46,6 +45,10 @@
           "type": "string",
           "description": "Unique identifier for the User entity."
         },
+        "username": {
+          "type": "string",
+          "description": "Username of the user."
+        },
         "firstName": {
           "type": "string",
           "description": "First name of the user."
@@ -53,18 +56,13 @@
         "lastName": {
           "type": "string",
           "description": "Last name of the user."
-        },
-        "email": {
-          "type": "string",
-          "description": "Email address of the user.",
-          "format": "email"
         }
       },
       "required": [
         "id",
+        "username",
         "firstName",
-        "lastName",
-        "email"
+        "lastName"
       ]
     },
     "Student": {
@@ -123,6 +121,7 @@
         },
         "description": {
           "type": "string",
+
           "description": "Description of the course."
         }
       },

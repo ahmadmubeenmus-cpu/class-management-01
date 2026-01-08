@@ -10,19 +10,23 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/firebase';
+import { useAuth, setDocumentNonBlocking } from '@/firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { GraduationCap } from 'lucide-react';
+import { doc, getFirestore } from 'firebase/firestore';
 
 export function Login() {
   const auth = useAuth();
   const { toast } = useToast();
-  const [email, setEmail] = useState('admin@example.com');
+  const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('password');
+
+  // We'll construct a fake email from the username for Firebase Auth
+  const getEmailFromUsername = (uname: string) => `${uname}@example.com`;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,32 +37,41 @@ export function Login() {
         });
         return;
     }
+    const email = getEmailFromUsername(username);
 
     try {
-      // First, try to sign in.
       await signInWithEmailAndPassword(auth, email, password);
       toast({ title: 'Signed in successfully' });
     } catch (signInError: any) {
-      // If sign in fails, check if it's because the user doesn't exist.
       if (signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/user-not-found') {
         try {
-          // If the user doesn't exist, try to create a new account.
-          await createUserWithEmailAndPassword(auth, email, password);
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          const user = userCredential.user;
+          
+          if (username === 'admin') {
+            const firestore = getFirestore();
+            const adminDocRef = doc(firestore, 'admins', user.uid);
+            setDocumentNonBlocking(adminDocRef, {
+              id: user.uid,
+              username: 'admin',
+              firstName: 'Admin',
+              lastName: 'User',
+              role: 'super_admin'
+            }, {});
+          }
+
           toast({
             title: 'Account created',
             description: 'Signed in successfully.',
           });
         } catch (signUpError: any) {
-            // If creating the account also fails, show a generic error.
-            // This can happen if the password is too weak, or other Firebase rules.
             toast({
                 variant: 'destructive',
                 title: 'Login Failed',
-                description: signUpError.message || 'Invalid email or password. Please try again.',
+                description: signUpError.message || 'An unknown error occurred during sign up.',
             });
         }
       } else {
-        // Handle other sign-in errors (e.g., network issues)
         toast({
           variant: 'destructive',
           title: 'Authentication Error',
@@ -82,23 +95,23 @@ export function Login() {
           <CardHeader>
             <CardTitle className="text-2xl">Sign In</CardTitle>
             <CardDescription>
-              Enter your email below to login to your account.
+              Enter your username and password below to login.
               <br />
-              Use <strong>admin@example.com</strong> and <strong>password</strong> to log in.
+              Use <strong>admin</strong> and <strong>password</strong> to log in.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin}>
               <div className="grid gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="username">Username</Label>
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="m@example.com"
+                    id="username"
+                    type="text"
+                    placeholder="admin"
                     required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                   />
                 </div>
                 <div className="grid gap-2">

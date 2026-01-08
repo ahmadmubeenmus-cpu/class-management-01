@@ -5,12 +5,21 @@ import { ClassesTab } from '@/components/classes-tab';
 import { ReportsTab } from '@/components/reports-tab';
 import { LayoutDashboard, BookUser, FileText, Users } from 'lucide-react';
 import { AdminTab } from './admin-tab';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 export function Dashboard() {
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
 
-  const isAdmin = user?.email === 'admin@example.com';
+  const adminCheckRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'admins', user.uid) : null),
+    [user, firestore]
+  );
+  const { data: adminDoc, isLoading: isAdminLoading } = useDoc(adminCheckRef);
+
+  const isAdmin = !!adminDoc;
+  const isLoading = isUserLoading || isAdminLoading;
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -32,7 +41,7 @@ export function Dashboard() {
                 Reports
               </TabsTrigger>
               {/* Conditionally render the Admin tab based on user's role */}
-              {!isUserLoading && isAdmin && (
+              {!isLoading && isAdmin && (
                 <TabsTrigger value="admin">
                   <Users className="mr-2 h-4 w-4" />
                   Admin
