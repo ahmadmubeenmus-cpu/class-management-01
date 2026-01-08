@@ -85,7 +85,9 @@ service cloud.firestore {
      * @principle Enforces self-management for admin profile data.
      */
     match /admins/{adminId} {
-      allow read, update, create: if isOwner(adminId);
+      allow get: if isOwner(adminId);
+      allow create: if isOwner(adminId);
+      allow update: if isOwner(adminId) && isExistingDoc() && request.resource.data.id == resource.data.id;
       allow list, delete: if false;
     }
 
@@ -132,8 +134,8 @@ service cloud.firestore {
      */
     match /courses/{courseId} {
       allow get, list: if isAttendanceMarker();
-      allow create: if isAdmin() && request.resource.data.id == courseId;
-      allow update: if isAdmin() && isExistingDoc() && request.resource.data.id == resource.data.id;
+      allow create: if isAdmin();
+      allow update: if isAdmin() && isExistingDoc() && request.resource.data.id == resource.data.id && request.resource.data.id == courseId;
       allow delete: if isAdmin() && isExistingDoc();
 
       /**
