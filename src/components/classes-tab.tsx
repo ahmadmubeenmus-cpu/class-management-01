@@ -37,24 +37,30 @@ export function ClassesTab() {
 
   const fetchEnrolledStudents = async (courseId: string): Promise<Student[]> => {
     if (!firestore) return [];
-
+  
     const studentsRef = collection(firestore, `courses/${courseId}/students`);
     const studentEnrollments = await getDocs(studentsRef);
     const studentIds = studentEnrollments.docs.map(d => d.id);
-
+  
     if (studentIds.length === 0) {
       return [];
     }
-
-    // Firestore 'in' query is limited to 30 items in Firebase JS SDK v9, handle chunks if needed
-    const studentDocsQuery = query(collection(firestore, 'students'), where('id', 'in', studentIds.slice(0, 30))); 
-    const studentDocsSnapshot = await getDocs(studentDocsQuery);
+  
+    const allStudents: Student[] = [];
+    // Firestore 'in' query is limited to 30 items, so we need to batch the requests
+    for (let i = 0; i < studentIds.length; i += 30) {
+      const chunk = studentIds.slice(i, i + 30);
+      if (chunk.length > 0) {
+        const studentDocsQuery = query(collection(firestore, 'students'), where('id', 'in', chunk));
+        const studentDocsSnapshot = await getDocs(studentDocsQuery);
+        const studentsList: Student[] = studentDocsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+        allStudents.push(...studentsList);
+      }
+    }
     
-    const studentsList: Student[] = studentDocsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
-    
-    studentsList.sort((a, b) => (a.studentId || "").localeCompare(b.studentId || ""));
-
-    return studentsList;
+    allStudents.sort((a, b) => (a.studentId || "").localeCompare(b.studentId || ""));
+  
+    return allStudents;
   }
 
   const handleMarkAttendance = async (classItem: Course) => {

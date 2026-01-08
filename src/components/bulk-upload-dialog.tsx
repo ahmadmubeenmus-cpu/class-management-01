@@ -67,7 +67,9 @@ export function BulkUploadDialog() {
                     const nameParts = student.name.trim().split(' ');
                     const firstName = nameParts[0] || '';
                     const lastName = nameParts.slice(1).join(' ') || '';
-                    const email = `${student.studentId.replace(/\s/g, '')}@example.com`;
+                    // Generate email from first and last name, removing spaces and converting to lowercase
+                    const email = `${firstName.toLowerCase()}${lastName.toLowerCase().replace(/\s/g, '')}@example.com`;
+
 
                     const newStudentRef = doc(studentsCollection);
                     
