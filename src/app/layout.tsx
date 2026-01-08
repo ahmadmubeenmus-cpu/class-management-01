@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
+import { SidebarLayout } from '@/components/sidebar-layout';
 
 export const metadata: Metadata = {
   title: 'AttendanceEase',
@@ -22,7 +23,11 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <FirebaseClientProvider>
-          {children}
+          <div className="flex min-h-screen w-full flex-col bg-muted/40">
+            <SidebarLayout>
+              {children}
+            </SidebarLayout>
+          </div>
         </FirebaseClientProvider>
         <Toaster />
       </body>

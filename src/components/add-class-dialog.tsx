@@ -12,13 +12,17 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
 
-export function AddClassDialog() {
+interface AddClassDialogProps {
+    children?: React.ReactNode;
+}
+
+
+export function AddClassDialog({ children }: AddClassDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [open, setOpen] = useState(false);
@@ -64,14 +68,7 @@ export function AddClassDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" className="h-8 gap-1">
-          <PlusCircle className="h-3.5 w-3.5" />
-          <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-            Add Class
-          </span>
-        </Button>
-      </DialogTrigger>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>

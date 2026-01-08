@@ -7,25 +7,24 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
-import { useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { Student } from '@/lib/types';
 
 
-interface AddStudentDialogProps {
+interface EditStudentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  courseId?: string;
-  children?: React.ReactNode;
+  student: Student;
 }
 
-export function AddStudentDialog({ open, onOpenChange, courseId, children }: AddStudentDialogProps) {
+export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [studentId, setStudentId] = useState('');
@@ -33,10 +32,19 @@ export function AddStudentDialog({ open, onOpenChange, courseId, children }: Add
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
 
+  useEffect(() => {
+    if (student) {
+        setStudentId(student.studentId);
+        setFirstName(student.firstName);
+        setLastName(student.lastName);
+        setEmail(student.email);
+    }
+  }, [student]);
+
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!firestore) return;
+    if (!firestore || !student) return;
     if (!studentId || !firstName || !lastName || !email) {
         toast({
             variant: "destructive",
@@ -46,66 +54,40 @@ export function AddStudentDialog({ open, onOpenChange, courseId, children }: Add
         return;
     }
 
-    const studentsCol = collection(firestore, 'students');
+    const studentRef = doc(firestore, 'students', student.id);
+    
     try {
-      const newStudentRef = doc(studentsCol); // create a ref with an auto-generated ID
-      
-      // 1. Create student document
-      await setDocumentNonBlocking(newStudentRef, {
-        id: newStudentRef.id,
-        studentId,
-        firstName,
-        lastName,
-        email,
-      }, {});
+        await updateDocumentNonBlocking(studentRef, {
+            studentId,
+            firstName,
+            lastName,
+            email
+        });
 
-      // 2. If a courseId is provided, enroll the student in that course
-      if (courseId) {
-        const courseStudentRef = doc(firestore, `courses/${courseId}/students/${newStudentRef.id}`);
-        await setDocumentNonBlocking(courseStudentRef, {
-          studentId: newStudentRef.id,
-          courseId: courseId
-        }, {});
-         toast({
-            title: 'Student Added & Enrolled',
-            description: 'The new student has been successfully created and enrolled in the class.',
+        toast({
+            title: 'Student Updated',
+            description: 'The student details have been successfully updated.',
             className: 'bg-accent text-accent-foreground'
-          });
-      } else {
-         toast({
-            title: 'Student Added',
-            description: 'The new student has been successfully created.',
-            className: 'bg-accent text-accent-foreground'
-          });
-      }
-      
-      onOpenChange(false);
-      setStudentId('');
-      setFirstName('');
-      setLastName('');
-      setEmail('');
+        });
 
+        onOpenChange(false);
     } catch(e) {
        toast({
             variant: "destructive",
             title: "Error",
-            description: "Failed to add student.",
+            description: "Failed to update student.",
         });
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Add New Student</DialogTitle>
+            <DialogTitle>Edit Student</DialogTitle>
             <DialogDescription>
-              {courseId 
-                ? "Enter details for the new student. They will be automatically enrolled in the selected class."
-                : "Enter the details for the new student."
-              }
+              Update the details for this student.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -135,7 +117,7 @@ export function AddStudentDialog({ open, onOpenChange, courseId, children }: Add
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">Save Student</Button>
+            <Button type="submit">Save Changes</Button>
           </DialogFooter>
         </form>
       </DialogContent>

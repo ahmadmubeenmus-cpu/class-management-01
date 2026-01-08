@@ -13,13 +13,16 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Papa from 'papaparse';
 import { useFirestore } from '@/firebase';
 import { collection, writeBatch, doc } from 'firebase/firestore';
 
-export function BulkUploadDialog() {
+interface BulkUploadDialogProps {
+  children?: React.ReactNode;
+}
+
+export function BulkUploadDialog({ children }: BulkUploadDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [open, setOpen] = useState(false);
@@ -68,8 +71,7 @@ export function BulkUploadDialog() {
                     const firstName = nameParts[0] || '';
                     const lastName = nameParts.slice(1).join(' ') || '';
                     // Generate email from first and last name, removing spaces and converting to lowercase
-                    const email = `${firstName.toLowerCase()}${lastName.toLowerCase().replace(/\s/g, '')}@example.com`;
-
+                    const email = `${firstName.toLowerCase().replace(/\s/g, '')}${lastName.toLowerCase().replace(/\s/g, '')}@example.com`;
 
                     const newStudentRef = doc(studentsCollection);
                     
@@ -118,14 +120,7 @@ export function BulkUploadDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="h-8 gap-1">
-          <Upload className="h-3.5 w-3.5" />
-          <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-            Bulk Upload
-          </span>
-        </Button>
-      </DialogTrigger>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Bulk Student Upload</DialogTitle>

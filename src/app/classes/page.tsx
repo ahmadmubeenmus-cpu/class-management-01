@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -11,26 +11,28 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { AddClassDialog } from './add-class-dialog';
-import { AttendanceSheet } from './attendance-sheet';
+import { AddClassDialog } from '@/components/add-class-dialog';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, deleteDoc } from 'firebase/firestore';
 import type { Course, Student } from '@/lib/types';
-import { ViewStudentsDialog } from './view-students-dialog';
-import { AddStudentDialog } from './add-student-dialog';
-import { EnrollStudentDialog } from './enroll-student-dialog';
+import { ViewStudentsDialog } from '@/components/view-students-dialog';
+import { AddStudentDialog } from '@/components/add-student-dialog';
+import { EnrollStudentDialog } from '@/components/enroll-student-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 interface CourseWithStudents extends Course {
   students: Student[];
 }
 
-export function ClassesTab() {
+export default function ClassesPage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
   const coursesQuery = useMemoFirebase(() => collection(firestore, 'courses'), [firestore]);
-  const { data: courses, isLoading: coursesLoading } = useCollection<Course>(coursesQuery);
+  const { data: courses, isLoading: coursesLoading, error } = useCollection<Course>(coursesQuery);
 
   const [selectedClass, setSelectedClass] = useState<CourseWithStudents | null>(null);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isStudentsDialogOpen, setIsStudentsDialogOpen] = useState(false);
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
   const [isEnrollStudentDialogOpen, setIsEnrollStudentDialogOpen] = useState(false);
@@ -47,7 +49,6 @@ export function ClassesTab() {
     }
   
     const allStudents: Student[] = [];
-    // Firestore 'in' query is limited to 30 items, so we need to batch the requests
     for (let i = 0; i < studentIds.length; i += 30) {
       const chunk = studentIds.slice(i, i + 30);
       if (chunk.length > 0) {
@@ -63,17 +64,6 @@ export function ClassesTab() {
     return allStudents;
   }
 
-  const handleMarkAttendance = async (classItem: Course) => {
-    const studentsList = await fetchEnrolledStudents(classItem.id);
-    setSelectedClass({ ...classItem, students: studentsList });
-    setIsSheetOpen(true);
-  };
-  
-  const handleCloseAttendanceSheet = () => {
-    setIsSheetOpen(false);
-    setSelectedClass(null);
-  }
-
   const handleViewStudents = async (classItem: Course) => {
     const studentsList = await fetchEnrolledStudents(classItem.id);
     setSelectedClass({ ...classItem, students: studentsList });
@@ -86,7 +76,7 @@ export function ClassesTab() {
   }
 
   const handleAddStudent = (classItem: Course) => {
-    setSelectedClass({ ...classItem, students: [] }); // students array is empty as it's not needed here
+    setSelectedClass({ ...classItem, students: [] });
     setIsAddStudentDialogOpen(true);
   }
 
@@ -94,7 +84,6 @@ export function ClassesTab() {
     setIsAddStudentDialogOpen(false);
     setSelectedClass(null);
   }
-
 
   const handleEnrollStudent = async (classItem: Course) => {
     const studentsList = await fetchEnrolledStudents(classItem.id);
@@ -106,19 +95,44 @@ export function ClassesTab() {
     setIsEnrollStudentDialogOpen(false);
     setSelectedClass(null);
   }
+  
+  const handleDeleteClass = async (courseId: string) => {
+    if (!firestore) return;
+    try {
+        await deleteDoc(doc(firestore, "courses", courseId));
+        toast({
+            title: "Class Deleted",
+            description: "The class has been successfully deleted.",
+            className: 'bg-accent text-accent-foreground'
+        });
+    } catch (e) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to delete class.",
+        });
+    }
+  }
 
   return (
-    <>
-      <div className="flex items-center justify-between gap-2 mt-4">
+    <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
+      <div className="flex items-center justify-between gap-2">
         <div>
-            <h2 className="text-2xl font-bold tracking-tight">Your Classes</h2>
+            <h1 className="text-2xl font-bold tracking-tight">Classes</h1>
             <p className="text-muted-foreground">Here's a list of your classes for this semester.</p>
         </div>
         <div className="flex items-center gap-2">
-          <AddClassDialog />
+            <AddClassDialog>
+                <Button size="sm" className="h-8 gap-1">
+                    <PlusCircle className="h-3.5 w-3.5" />
+                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                        Add Class
+                    </span>
+                </Button>
+            </AddClassDialog>
         </div>
       </div>
-      <Card className="mt-4">
+      <Card>
         <CardContent className="pt-6">
           <Table>
             <TableHeader>
@@ -144,7 +158,9 @@ export function ClassesTab() {
                   <TableCell className="hidden md:table-cell">{classItem.courseCode}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-2">
-                    <Button size="sm" onClick={() => handleMarkAttendance(classItem)}>Mark Attendance</Button>
+                    <Link href={`/attendance?courseId=${classItem.id}`} passHref>
+                        <Button size="sm">Mark Attendance</Button>
+                    </Link>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button aria-haspopup="true" size="icon" variant="ghost">
@@ -157,8 +173,24 @@ export function ClassesTab() {
                         <DropdownMenuItem onClick={() => handleAddStudent(classItem)}>Add New Student</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEnrollStudent(classItem)}>Enroll Existing Student</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleViewStudents(classItem)}>View Enrolled Students</DropdownMenuItem>
-                        <DropdownMenuItem>Edit Class</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">Delete Class</DropdownMenuItem>
+                        <DropdownMenuItem disabled>Edit Class</DropdownMenuItem>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">Delete Class</DropdownMenuItem>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the class and all its associated data, including enrollment and attendance records.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteClass(classItem.id)}>Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                       </DropdownMenuContent>
                     </DropdownMenu>
                     </div>
@@ -169,13 +201,7 @@ export function ClassesTab() {
           </Table>
         </CardContent>
       </Card>
-      {selectedClass && isSheetOpen && (
-        <AttendanceSheet 
-            classInfo={selectedClass} 
-            open={isSheetOpen}
-            onOpenChange={handleCloseAttendanceSheet}
-        />
-      )}
+      
        {selectedClass && isStudentsDialogOpen && (
         <ViewStudentsDialog
             classInfo={selectedClass}
@@ -197,6 +223,6 @@ export function ClassesTab() {
             course={selectedClass}
         />
       )}
-    </>
+    </main>
   );
 }

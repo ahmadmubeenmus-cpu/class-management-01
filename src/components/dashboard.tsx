@@ -1,52 +1,90 @@
 'use client';
-import { Header } from '@/components/header';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DashboardTab } from '@/components/dashboard-tab';
-import { ClassesTab } from '@/components/classes-tab';
-import { ReportsTab } from '@/components/reports-tab';
-import { LayoutDashboard, BookUser, FileText, Users } from 'lucide-react';
-import { AdminTab } from './admin-tab';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { StatCard } from '@/components/stat-card';
+import { Users, Book, Percent, CalendarClock, BookUser, UserPlus, PlusCircle } from 'lucide-react';
+import { useMemoFirebase, useCollection, useFirestore } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import Link from 'next/link';
+import { AddClassDialog } from './add-class-dialog';
+import { AddStudentDialog } from './add-student-dialog';
+import { useState } from 'react';
 
 export function Dashboard() {
+    const firestore = useFirestore();
+
+    const studentsQuery = useMemoFirebase(() => collection(firestore, 'students'), [firestore]);
+    const { data: students } = useCollection(studentsQuery);
+    
+    const coursesQuery = useMemoFirebase(() => collection(firestore, 'courses'), [firestore]);
+    const { data: courses } = useCollection(coursesQuery);
+    
+    const totalStudents = students?.length || 0;
+    const totalClasses = courses?.length || 0;
+
+    // Mock data for now
+    const overallAttendancePercentage = 92;
+
+    const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
+
+
   return (
-    <div className="flex min-h-screen w-full flex-col bg-muted/40">
-      <Header />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-        <Tabs defaultValue="dashboard" className="grid w-full">
-          <div className="flex items-center">
-            <TabsList>
-              <TabsTrigger value="dashboard">
-                <LayoutDashboard className="mr-2 h-4 w-4" />
-                Dashboard
-              </TabsTrigger>
-              <TabsTrigger value="classes">
-                <BookUser className="mr-2 h-4 w-4" />
-                Classes
-              </TabsTrigger>
-              <TabsTrigger value="reports">
-                <FileText className="mr-2 h-4 w-4" />
-                Reports
-              </TabsTrigger>
-              <TabsTrigger value="admin">
-                <Users className="mr-2 h-4 w-4" />
-                Admin
-              </TabsTrigger>
-            </TabsList>
-          </div>
-          <TabsContent value="dashboard">
-            <DashboardTab />
-          </TabsContent>
-          <TabsContent value="classes">
-            <ClassesTab />
-          </TabsContent>
-          <TabsContent value="reports">
-            <ReportsTab />
-          </TabsContent>
-          <TabsContent value="admin">
-            <AdminTab />
-          </TabsContent>
-        </Tabs>
-      </main>
+    <>
+    <div className="flex flex-col gap-4 md:gap-8 mt-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard 
+            Icon={Book}
+            title="Total Classes"
+            value={totalClasses.toString()}
+            description="All active courses"
+        />
+        <StatCard 
+            Icon={Users}
+            title="Total Students"
+            value={totalStudents.toString()}
+            description="Across all classes"
+        />
+        <StatCard 
+            Icon={Percent}
+            title="Overall Attendance"
+            value={`${overallAttendancePercentage}%`}
+            description="Based on all records"
+        />
+        <StatCard 
+            Icon={CalendarClock}
+            title="Classes Today"
+            value="-"
+            description="Scheduled for today"
+        />
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+          <CardDescription>
+            Get started with your most common tasks.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Link href="/attendance" passHref>
+                <Button size="lg" className="w-full h-20 text-lg">
+                    <BookUser className="mr-4 h-6 w-6" />
+                    Mark Attendance
+                </Button>
+            </Link>
+             <AddClassDialog>
+                <Button size="lg" variant="secondary" className="w-full h-20 text-lg">
+                    <PlusCircle className="mr-4 h-6 w-6" />
+                    Add New Class
+                </Button>
+             </AddClassDialog>
+             <Button size="lg" variant="secondary" className="w-full h-20 text-lg" onClick={() => setIsAddStudentDialogOpen(true)}>
+                <UserPlus className="mr-4 h-6 w-6" />
+                Add New Student
+            </Button>
+        </CardContent>
+      </Card>
     </div>
+    <AddStudentDialog open={isAddStudentDialogOpen} onOpenChange={setIsAddStudentDialogOpen} />
+    </>
   );
 }

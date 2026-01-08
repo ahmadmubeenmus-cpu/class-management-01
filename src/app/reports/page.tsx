@@ -1,15 +1,15 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from './ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { DatePickerWithRange } from './date-picker-with-range';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DatePickerWithRange } from '@/components/date-picker-with-range';
 import { Download } from 'lucide-react';
 import type { Student, Course, AttendanceRecord } from '@/lib/types';
-import { Badge } from './ui/badge';
+import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { DateRange } from 'react-day-picker';
 import { startOfDay, endOfDay } from 'date-fns';
 
@@ -22,7 +22,7 @@ interface ReportData {
     percentage: number;
 }
 
-export function ReportsTab() {
+export default function ReportsPage() {
   const firestore = useFirestore();
   const coursesQuery = useMemoFirebase(() => collection(firestore, 'courses'), [firestore]);
   const { data: courses } = useCollection<Course>(coursesQuery);
@@ -110,10 +110,10 @@ export function ReportsTab() {
   };
 
   return (
-    <div className="flex flex-col gap-4 md:gap-8 mt-4">
+    <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
       <div className="flex items-center justify-between">
         <div>
-            <h2 className="text-2xl font-bold tracking-tight">Attendance Reports</h2>
+            <h1 className="text-2xl font-bold tracking-tight">Attendance Reports</h1>
             <p className="text-muted-foreground">Generate and download detailed attendance reports.</p>
         </div>
       </div>
@@ -200,7 +200,7 @@ export function ReportsTab() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </main>
   );
 }
 
