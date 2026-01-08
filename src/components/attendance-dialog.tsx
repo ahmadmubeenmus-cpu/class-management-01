@@ -48,11 +48,9 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
     }
   }, [open]);
 
-  const handleDateSelect = (date: Date | undefined) => {
-    if (date) {
-        setAttendanceDate(date);
-        setStep('students');
-    }
+  const handleDateSelect = (date: Date) => {
+    setAttendanceDate(date);
+    setStep('students');
   }
 
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
@@ -123,7 +121,7 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className={step === 'date' ? 'sm:max-w-auto' : 'max-w-4xl w-full'}
+        className={step === 'date' ? 'sm:max-w-md' : 'max-w-4xl w-full'}
         >
         <DialogHeader>
           <DialogTitle>Mark Attendance: {classInfo.courseName}</DialogTitle>
@@ -137,14 +135,13 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
         
         {step === 'date' && (
             <div className='flex justify-center py-4'>
-                 <Calendar
+                 <Calendar 
                     mode="single"
                     selected={attendanceDate}
-                    onSelect={handleDateSelect}
-                    disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                    onSelect={(day) => day && handleDateSelect(day)}
+                    disabled={(date) => date > new Date()}
                     initialFocus
-                    className="rounded-md border"
-                />
+                 />
             </div>
         )}
 
