@@ -135,7 +135,7 @@ service cloud.firestore {
     match /courses/{courseId} {
       allow get, list: if isAttendanceMarker();
       allow create: if isAdmin();
-      allow update: if isAdmin() && isExistingDoc() && request.resource.data.id == resource.data.id && request.resource.data.id == courseId;
+      allow update: if isAdmin() && isExistingDoc();
       allow delete: if isAdmin() && isExistingDoc();
 
       /**
