@@ -5,8 +5,22 @@ import { ClassesTab } from '@/components/classes-tab';
 import { ReportsTab } from '@/components/reports-tab';
 import { LayoutDashboard, BookUser, FileText, Users } from 'lucide-react';
 import { AdminTab } from './admin-tab';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 export function Dashboard() {
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  // Check if the current user has a document in the 'admins' collection
+  const adminDocRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'admins', user.uid);
+  }, [user, firestore]);
+  const { data: adminDoc, isLoading: isAdminLoading } = useDoc(adminDocRef);
+
+  const isAdmin = adminDoc && adminDoc.id === user?.uid;
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Header />
@@ -26,11 +40,13 @@ export function Dashboard() {
                 <FileText className="mr-2 h-4 w-4" />
                 Reports
               </TabsTrigger>
-              {/* This will be conditionally rendered based on user role later */}
-              <TabsTrigger value="admin">
-                <Users className="mr-2 h-4 w-4" />
-                Admin
-              </TabsTrigger>
+              {/* Conditionally render the Admin tab based on user's role */}
+              {!isAdminLoading && isAdmin && (
+                <TabsTrigger value="admin">
+                  <Users className="mr-2 h-4 w-4" />
+                  Admin
+                </TabsTrigger>
+              )}
             </TabsList>
           </div>
           <TabsContent value="dashboard">
@@ -42,9 +58,11 @@ export function Dashboard() {
           <TabsContent value="reports">
             <ReportsTab />
           </TabsContent>
-          <TabsContent value="admin">
-            <AdminTab />
-          </TabsContent>
+          {isAdmin && (
+            <TabsContent value="admin">
+              <AdminTab />
+            </TabsContent>
+          )}
         </Tabs>
       </main>
     </div>

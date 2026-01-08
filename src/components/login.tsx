@@ -35,15 +35,14 @@ export function Login() {
       await signInWithEmailAndPassword(auth, email, password);
       toast({ title: 'Signed in successfully' });
     } catch (signInError: any) {
-      // If sign-in fails, check the error code.
-      // 'auth/invalid-credential' can mean user not found OR wrong password.
+      // If sign-in fails, check if it's because the user doesn't exist.
+      // 'auth/invalid-credential' is the code for user not found OR wrong password.
       if (
         signInError.code === 'auth/invalid-credential' &&
         email === 'admin@example.com'
       ) {
-        // Since we can't be sure if the user doesn't exist or if the password is just wrong,
-        // we'll attempt to create the user. If the user already exists, this will fail,
-        // which is fine, as it means the password was wrong.
+        // Attempt to create the user. If this fails, it's likely because the user
+        // already exists, which means the original password attempt was wrong.
         try {
           const userCredential = await createUserWithEmailAndPassword(
             auth,
@@ -73,7 +72,7 @@ export function Login() {
             variant: 'destructive',
             title: 'Authentication Error',
             description:
-              'Invalid password. If this is your first time, the admin account may already exist.',
+              'Invalid password. If this is your first time, the admin account may already exist with a different password.',
           });
         }
       } else {

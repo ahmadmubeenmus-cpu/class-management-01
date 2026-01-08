@@ -97,7 +97,7 @@ service cloud.firestore {
     /**
      * @description Admin profiles. Admins can create other admins and update their own profiles.
      * @path /admins/{adminId}
-     * @allow (create) An existing admin creates a new admin document. auth.uid must be in /admins.
+     * @allow (create) An existing admin OR a new user creating their own doc.
      * @allow (update) An admin updates their own profile document. auth.uid must match {adminId}.
      * @deny (list) A user attempts to list all admin documents.
      * @deny (delete) An admin attempts to delete their own document.
@@ -106,15 +106,16 @@ service cloud.firestore {
     match /admins/{adminId} {
       allow get: if isOwner(adminId);
       allow list: if false;
-      allow create: if isAdmin() && request.resource.data.id == adminId;
+      // Allow creation if the user is creating their own document, or if an admin is creating one.
+      allow create: if isOwner(adminId) || isAdmin();
       allow update: if isOwner(adminId) && request.resource.data.id == resource.data.id;
       allow delete: if isAdmin() && !isOwner(adminId) && isExistingDoc();
     }
 
     /**
-     * @description Profiles for users who can mark attendance. Managed entirely by admins.
+     * @description Profiles for users who can mark attendance. Managed by admins.
      * @path /users/{userId}
-     * @allow (create) An admin creates a new user profile.
+     * @allow (create) An admin creates a new user profile, or user creates their own.
      * @allow (get) A user views their own profile, or an admin views any user profile.
      * @deny (list) An anonymous user attempts to list all users.
      * @deny (update) A user attempts to update their own profile.
@@ -123,7 +124,8 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if false;
-      allow create: if isAdmin() && request.resource.data.id == userId;
+      // Allow creation if the user is creating their own document, or if an admin is creating one.
+      allow create: if isOwner(userId) || isAdmin();
       allow update: if isAdmin() && isExistingDoc() && request.resource.data.id == resource.data.id;
       allow delete: if isAdmin() && isExistingDoc();
     }
