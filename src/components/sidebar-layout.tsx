@@ -82,7 +82,7 @@ export function SidebarLayout({
                  <h1 className={cn(
                      "text-xl font-bold font-headline",
                      isSidebarCollapsed && "hidden"
-                     )}>AttendanceEase</h1>
+                     )}>Class Managment</h1>
              </div>
               <div className="flex-1 overflow-y-auto">
                  <SidebarNav isCollapsed={isSidebarCollapsed} />

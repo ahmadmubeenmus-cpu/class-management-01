@@ -99,7 +99,7 @@ export function Header({ isMobileMenuOpen, setMobileMenuOpen, isSidebarCollapsed
                     onClick={() => setMobileMenuOpen(false)}
                 >
                     <GraduationCap className="h-6 w-6 text-primary" />
-                    <span className="">AttendanceEase</span>
+                    <span className="">Class Managment</span>
                 </Link>
             </div>
             <SidebarNav onLinkClick={() => setMobileMenuOpen(false)} />

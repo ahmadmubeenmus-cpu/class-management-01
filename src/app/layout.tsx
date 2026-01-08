@@ -6,7 +6,7 @@ import { SidebarLayout } from '@/components/sidebar-layout';
 import { UserProvider } from '@/firebase/auth/use-user';
 
 export const metadata: Metadata = {
-  title: 'AttendanceEase',
+  title: 'Class Managment',
   description: 'Streamline attendance tracking for your classes.',
 };
 
