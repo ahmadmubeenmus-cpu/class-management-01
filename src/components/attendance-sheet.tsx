@@ -94,7 +94,7 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-xl w-full">
+      <SheetContent className="sm:max-w-2xl w-full">
         <SheetHeader>
           <SheetTitle>Mark Attendance: {classInfo.courseName}</SheetTitle>
           <SheetDescription>
@@ -110,18 +110,22 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[50px]">SR#</TableHead>
               <TableHead>Student Name</TableHead>
+              <TableHead>Roll No.</TableHead>
               <TableHead className='text-center'>Present</TableHead>
               <TableHead className='text-center'>Absent</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {classInfo.students.map((student) => (
+            {classInfo.students.map((student, index) => (
               <TableRow key={student.id}>
+                <TableCell>{index + 1}</TableCell>
                 <TableCell>
                   <div className="font-medium">{student.firstName} {student.lastName}</div>
-                  <div className="text-sm text-muted-foreground">{student.studentId}</div>
+                  <div className="text-sm text-muted-foreground">{student.email}</div>
                 </TableCell>
+                <TableCell>{student.studentId}</TableCell>
                 <RadioGroup 
                     defaultValue="present" 
                     className="contents"

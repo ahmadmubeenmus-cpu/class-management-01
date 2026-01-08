@@ -1,7 +1,6 @@
 'use client';
 import { useState } from 'react';
 import { MoreHorizontal } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -15,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { AddClassDialog } from './add-class-dialog';
 import { AttendanceSheet } from './attendance-sheet';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import type { Course, Student } from '@/lib/types';
 import { ViewStudentsDialog } from './view-students-dialog';
 import { AddStudentDialog } from './add-student-dialog';
@@ -36,59 +35,39 @@ export function ClassesTab() {
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
   const [isEnrollStudentDialogOpen, setIsEnrollStudentDialogOpen] = useState(false);
 
-  const handleMarkAttendance = async (classItem: Course) => {
-    if (!firestore) return;
-    
-    const studentsRef = collection(firestore, `courses/${classItem.id}/students`);
+  const fetchEnrolledStudents = async (courseId: string): Promise<Student[]> => {
+    if (!firestore) return [];
+
+    const studentsRef = collection(firestore, `courses/${courseId}/students`);
     const studentEnrollments = await getDocs(studentsRef);
     const studentIds = studentEnrollments.docs.map(d => d.id);
 
     if (studentIds.length === 0) {
-      const classWithStudents: CourseWithStudents = { ...classItem, students: [] };
-      setSelectedClass(classWithStudents);
-      setIsSheetOpen(true);
-      return;
+      return [];
     }
 
     const studentsList: Student[] = [];
-    // Firestore 'in' query is limited to 30 elements.
-    // If more students, we'd need to batch this.
-    const studentDocsQuery = query(collection(firestore, 'students'), where('id', 'in', studentIds));
+    const studentDocsQuery = query(collection(firestore, 'students'), where('id', 'in', studentIds.slice(0, 30))); // Firestore 'in' query limit
     const studentDocsSnapshot = await getDocs(studentDocsQuery);
     
     studentDocsSnapshot.forEach(doc => {
         studentsList.push({ id: doc.id, ...doc.data() } as Student);
     });
     
-    studentsList.sort((a, b) => {
-      const idA = parseInt(a.studentId.replace(/[^0-9]/g, ''), 10) || 0;
-      const idB = parseInt(b.studentId.replace(/[^0-9]/g, ''), 10) || 0;
-      return idA - idB;
-    });
+    studentsList.sort((a, b) => (a.studentId || "").localeCompare(b.studentId || ""));
 
+    return studentsList;
+  }
+
+  const handleMarkAttendance = async (classItem: Course) => {
+    const studentsList = await fetchEnrolledStudents(classItem.id);
     const classWithStudents: CourseWithStudents = { ...classItem, students: studentsList };
     setSelectedClass(classWithStudents);
     setIsSheetOpen(true);
   };
 
   const handleViewStudents = async (classItem: Course) => {
-    if (!firestore) return;
-
-    const studentsRef = collection(firestore, `courses/${classItem.id}/students`);
-    const studentEnrollments = await getDocs(studentsRef);
-    const studentIds = studentEnrollments.docs.map(d => d.id);
-
-    const studentsList: Student[] = [];
-    if (studentIds.length > 0) {
-      const studentDocsQuery = query(collection(firestore, 'students'), where('id', 'in', studentIds));
-      const studentDocsSnapshot = await getDocs(studentDocsQuery);
-      
-      studentDocsSnapshot.forEach(doc => {
-          studentsList.push({ id: doc.id, ...doc.data() } as Student);
-      });
-      studentsList.sort((a, b) => a.firstName.localeCompare(b.firstName));
-    }
-    
+    const studentsList = await fetchEnrolledStudents(classItem.id);
     setSelectedClass({ ...classItem, students: studentsList });
     setIsStudentsDialogOpen(true);
   }
@@ -119,6 +98,7 @@ export function ClassesTab() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[50px]">SR#</TableHead>
                 <TableHead>Class Name</TableHead>
                 <TableHead className="hidden md:table-cell">Course Code</TableHead>
                 <TableHead>
@@ -127,12 +107,14 @@ export function ClassesTab() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {coursesLoading && <TableRow><TableCell colSpan={4}>Loading...</TableCell></TableRow>}
-              {courses?.map((classItem) => (
+              {coursesLoading && <TableRow><TableCell colSpan={4} className="text-center">Loading...</TableCell></TableRow>}
+              {!coursesLoading && courses?.length === 0 && <TableRow><TableCell colSpan={4} className="text-center">No classes found. Add a class to get started.</TableCell></TableRow>}
+              {courses?.map((classItem, index) => (
                 <TableRow key={classItem.id}>
+                  <TableCell>{index + 1}</TableCell>
                   <TableCell>
                     <div className="font-medium">{classItem.courseName}</div>
-                    <div className="text-sm text-muted-foreground">{classItem.courseCode}</div>
+                    <div className="text-sm text-muted-foreground md:hidden">{classItem.courseCode}</div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{classItem.courseCode}</TableCell>
                   <TableCell>
@@ -148,8 +130,8 @@ export function ClassesTab() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => handleAddStudent(classItem)}>Add New Student</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEnrollStudent(classItem)}>Enroll Student</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleViewStudents(classItem)}>View Students</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEnrollStudent(classItem)}>Enroll Existing Student</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleViewStudents(classItem)}>View Enrolled Students</DropdownMenuItem>
                         <DropdownMenuItem>Edit Class</DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive">Delete Class</DropdownMenuItem>
                       </DropdownMenuContent>

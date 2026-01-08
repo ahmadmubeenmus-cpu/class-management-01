@@ -14,6 +14,7 @@ import type { Student, Course } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { useState } from 'react';
 
 interface ViewStudentsDialogProps {
   classInfo: Course & { students: Student[] };
@@ -24,6 +25,7 @@ interface ViewStudentsDialogProps {
 export function ViewStudentsDialog({ classInfo, open, onOpenChange }: ViewStudentsDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const [students, setStudents] = useState(classInfo.students);
 
   const handleRemoveStudent = async (studentId: string) => {
     if (!firestore) return;
@@ -37,7 +39,7 @@ export function ViewStudentsDialog({ classInfo, open, onOpenChange }: ViewStuden
             description: 'The student has been unenrolled from this class.',
             className: 'bg-accent text-accent-foreground',
         });
-        onOpenChange(false); // Close and refresh would be better
+        setStudents(prev => prev.filter(s => s.id !== studentId));
     } catch (error) {
         toast({
             variant: "destructive",
@@ -60,19 +62,21 @@ export function ViewStudentsDialog({ classInfo, open, onOpenChange }: ViewStuden
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[50px]">SR#</TableHead>
                 <TableHead>Student Name</TableHead>
-                <TableHead>Student ID</TableHead>
+                <TableHead>Roll No.</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {classInfo.students.length === 0 && (
+              {students.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center">No students enrolled in this class.</TableCell>
+                  <TableCell colSpan={4} className="text-center">No students enrolled in this class.</TableCell>
                 </TableRow>
               )}
-              {classInfo.students.map((student) => (
+              {students.map((student, index) => (
                 <TableRow key={student.id}>
+                  <TableCell>{index + 1}</TableCell>
                   <TableCell>{student.firstName} {student.lastName}</TableCell>
                   <TableCell>{student.studentId}</TableCell>
                   <TableCell className="text-right">

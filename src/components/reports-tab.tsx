@@ -1,23 +1,23 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { DatePickerWithRange } from './date-picker-with-range';
 import { Download } from 'lucide-react';
-import type { Student, Course } from '@/lib/types';
+import type { Student, Course, AttendanceRecord } from '@/lib/types';
 import { Badge } from './ui/badge';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { DateRange } from 'react-day-picker';
+import { startOfDay, endOfDay } from 'date-fns';
+
 
 interface ReportData {
     student: Student;
-    class: Course;
     present: number;
     absent: number;
-    late: number;
-    excused: number;
     total: number;
     percentage: number;
 }
@@ -27,55 +27,67 @@ export function ReportsTab() {
   const coursesQuery = useMemoFirebase(() => collection(firestore, 'courses'), [firestore]);
   const { data: courses } = useCollection<Course>(coursesQuery);
 
-  const studentsQuery = useMemoFirebase(() => collection(firestore, 'students'), [firestore]);
-  const { data: students } = useCollection<Student>(studentsQuery);
-
-  const [selectedClassId, setSelectedClassId] = useState<string>('all');
+  const [selectedClassId, setSelectedClassId] = useState<string | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [reportData, setReportData] = useState<ReportData[]>([]);
 
-  const handleGenerateReport = () => {
-    // This is a placeholder.
-    // In a real app, you would fetch and process attendance records from Firestore based on the filters.
-    if (!students || !courses) return;
+  const handleGenerateReport = async () => {
+    if (!firestore || !selectedClassId) return;
 
-    let filteredStudents: Student[] = [];
-    if (selectedClassId === 'all') {
-        filteredStudents = students;
-    } else {
-        // This is simplified. In a real app, you'd filter students by course enrollment.
-        filteredStudents = students;
+    const studentEnrollmentsRef = collection(firestore, `courses/${selectedClassId}/students`);
+    const studentEnrollmentsSnap = await getDocs(studentEnrollmentsRef);
+    const studentIds = studentEnrollmentsSnap.docs.map(doc => doc.id);
+    
+    if (studentIds.length === 0) {
+      setReportData([]);
+      return;
     }
+    
+    const studentsRef = collection(firestore, 'students');
+    const studentsQuery = query(studentsRef, where('id', 'in', studentIds));
+    const studentsSnap = await getDocs(studentsQuery);
+    const students = studentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+    students.sort((a,b) => (a.studentId || "").localeCompare(b.studentId || ""));
 
-    const data = filteredStudents.map(student => {
-        const studentClass = courses.find(c => c.id === selectedClassId) || courses[0];
-        return {
-            student,
-            class: studentClass!,
-            present: Math.floor(Math.random() * 20),
-            absent: Math.floor(Math.random() * 5),
-            late: Math.floor(Math.random() * 3),
-            excused: Math.floor(Math.random() * 2),
-            total: 25,
-            percentage: Math.floor(Math.random() * 40) + 60, // Random % between 60 and 100
-        };
+
+    const attendanceRef = collection(firestore, `courses/${selectedClassId}/attendance_records`);
+    let attendanceQuery = query(attendanceRef);
+
+    if (dateRange?.from && dateRange?.to) {
+        attendanceQuery = query(attendanceQuery, 
+            where('date', '>=', startOfDay(dateRange.from)),
+            where('date', '<=', endOfDay(dateRange.to))
+        );
+    }
+    
+    const attendanceSnap = await getDocs(attendanceQuery);
+    const attendanceRecords = attendanceSnap.docs.map(doc => doc.data() as AttendanceRecord);
+
+    const data: ReportData[] = students.map(student => {
+        const studentRecords = attendanceRecords.filter(rec => rec.studentId === student.id);
+        const present = studentRecords.filter(r => r.status === 'present').length;
+        const absent = studentRecords.filter(r => r.status === 'absent').length;
+        const total = studentRecords.length;
+        const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
+        
+        return { student, present, absent, total, percentage };
     });
+
     setReportData(data);
   };
 
   const handleDownload = (format: 'csv' | 'pdf') => {
     if (format === 'csv') {
-        const headers = ["Student Name", "Student ID", "Class", "Attendance %", "Present", "Absent", "Late", "Excused", "Total Sessions"];
+        const headers = ["SR#", "Student Name", "Roll No.", "Attendance %", "Present", "Absent", "Total Sessions"];
         const csvRows = [headers.join(",")];
-        reportData.forEach(data => {
+        reportData.forEach((data, index) => {
             const row = [
+                index + 1,
                 `${data.student.firstName} ${data.student.lastName}`,
                 data.student.studentId,
-                data.class.courseName,
                 `${data.percentage}%`,
                 data.present,
                 data.absent,
-                data.late,
-                data.excused,
                 data.total,
             ];
             csvRows.push(row.join(","));
@@ -114,7 +126,7 @@ export function ReportsTab() {
         <CardContent className="flex flex-col sm:flex-row gap-4">
           <div className="grid gap-2">
             <Label>Date range</Label>
-            <DatePickerWithRange />
+            <DatePickerWithRange onDateChange={setDateRange} />
           </div>
           <div className="grid gap-2">
             <Label>Class</Label>
@@ -123,7 +135,6 @@ export function ReportsTab() {
                 <SelectValue placeholder="Select a class" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Classes</SelectItem>
                 {courses?.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.courseName}</SelectItem>
                 ))}
@@ -131,7 +142,7 @@ export function ReportsTab() {
             </Select>
           </div>
           <div className="self-end">
-            <Button onClick={handleGenerateReport}>Generate Report</Button>
+            <Button onClick={handleGenerateReport} disabled={!selectedClassId}>Generate Report</Button>
           </div>
         </CardContent>
       </Card>
@@ -142,7 +153,7 @@ export function ReportsTab() {
               <div>
                 <CardTitle>Report Results</CardTitle>
                 <CardDescription>
-                    Generated for {selectedClassId === 'all' ? 'all classes' : courses?.find(c => c.id === selectedClassId)?.courseName}.
+                    Generated for {courses?.find(c => c.id === selectedClassId)?.courseName}.
                 </CardDescription>
               </div>
               <div className='flex gap-2'>
@@ -152,39 +163,35 @@ export function ReportsTab() {
                         Download CSV
                     </span>
                 </Button>
-                <Button size="sm" variant="outline" className="h-8 gap-1" onClick={() => handleDownload('pdf')}>
-                    <Download className="h-3.5 w-3.5" />
-                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                        Download PDF
-                    </span>
-                </Button>
               </div>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]">SR#</TableHead>
                   <TableHead>Student</TableHead>
-                  {selectedClassId === 'all' && <TableHead>Class</TableHead>}
+                  <TableHead>Roll No.</TableHead>
                   <TableHead className="text-center">Attendance %</TableHead>
-                  <TableHead className="text-center hidden sm:table-cell">Summary (P/A/L/E)</TableHead>
+                  <TableHead className="text-center hidden sm:table-cell">Summary (Present/Absent/Total)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {reportData.map(({ student, class: c, percentage, present, absent, late, excused }) => (
+                {reportData.map(({ student, percentage, present, absent, total }, index) => (
                   <TableRow key={student.id}>
+                    <TableCell>{index + 1}</TableCell>
                     <TableCell>
                       <div className="font-medium">{student.firstName} {student.lastName}</div>
-                      <div className="text-sm text-muted-foreground">{student.studentId}</div>
+                      <div className="text-sm text-muted-foreground">{student.email}</div>
                     </TableCell>
-                    {selectedClassId === 'all' && <TableCell>{c.courseName}</TableCell>}
+                    <TableCell>{student.studentId}</TableCell>
                     <TableCell className="text-center">
                         <Badge variant={percentage >= 75 ? 'default' : 'destructive'} className={percentage >= 75 ? 'bg-accent text-accent-foreground hover:bg-accent/80' : ''}>
                             {percentage}%
                         </Badge>
                     </TableCell>
                     <TableCell className="text-center hidden sm:table-cell">
-                        {present} / {absent} / {late} / {excused}
+                        {present} / {absent} / {total}
                     </TableCell>
                   </TableRow>
                 ))}

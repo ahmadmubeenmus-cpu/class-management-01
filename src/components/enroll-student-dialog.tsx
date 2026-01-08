@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import type { Student, Course } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, getDocs } from 'firebase/firestore';
+import { collection, doc, getDocs, writeBatch } from 'firebase/firestore';
 
 interface EnrollStudentDialogProps {
   course: Course;
@@ -43,6 +43,7 @@ export function EnrollStudentDialog({ course, open, onOpenChange }: EnrollStuden
 
     getEnrolledStudentIds().then(enrolledIds => {
         const unenrolled = allStudents.filter(student => !enrolledIds.includes(student.id));
+        unenrolled.sort((a, b) => (a.studentId || "").localeCompare(b.studentId || ""));
         setUnenrolledStudents(unenrolled);
     });
 
@@ -74,6 +75,36 @@ export function EnrollStudentDialog({ course, open, onOpenChange }: EnrollStuden
     }
   };
 
+  const handleEnrollAll = async () => {
+    if (!firestore || unenrolledStudents.length === 0) return;
+
+    const batch = writeBatch(firestore);
+    
+    unenrolledStudents.forEach(student => {
+        const studentEnrollmentRef = doc(firestore, `courses/${course.id}/students/${student.id}`);
+        batch.set(studentEnrollmentRef, {
+            studentId: student.id,
+            courseId: course.id,
+        });
+    });
+
+    try {
+        await batch.commit();
+        toast({
+            title: 'All Students Enrolled',
+            description: `${unenrolledStudents.length} students have been enrolled.`,
+            className: 'bg-accent text-accent-foreground',
+        });
+        onOpenChange(false);
+    } catch (error) {
+        toast({
+            variant: "destructive",
+            title: "Enrollment Failed",
+            description: "Failed to enroll all students.",
+        });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
@@ -87,24 +118,26 @@ export function EnrollStudentDialog({ course, open, onOpenChange }: EnrollStuden
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[50px]">SR#</TableHead>
                 <TableHead>Student Name</TableHead>
-                <TableHead>Student ID</TableHead>
+                <TableHead>Roll No.</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {studentsLoading && (
                  <TableRow>
-                  <TableCell colSpan={3} className="text-center">Loading students...</TableCell>
+                  <TableCell colSpan={4} className="text-center">Loading students...</TableCell>
                 </TableRow>
               )}
               {!studentsLoading && unenrolledStudents.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center">All students are enrolled in this class.</TableCell>
+                  <TableCell colSpan={4} className="text-center">All students are already enrolled in this class.</TableCell>
                 </TableRow>
               )}
-              {unenrolledStudents.map((student) => (
+              {unenrolledStudents.map((student, index) => (
                 <TableRow key={student.id}>
+                  <TableCell>{index + 1}</TableCell>
                   <TableCell>{student.firstName} {student.lastName}</TableCell>
                   <TableCell>{student.studentId}</TableCell>
                   <TableCell className="text-right">
@@ -120,7 +153,12 @@ export function EnrollStudentDialog({ course, open, onOpenChange }: EnrollStuden
             </TableBody>
           </Table>
         </div>
-        <DialogFooter>
+        <DialogFooter className="justify-between">
+          <div>
+            {unenrolledStudents.length > 0 &&
+                <Button onClick={handleEnrollAll}>Enroll All</Button>
+            }
+          </div>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
         </DialogFooter>
       </DialogContent>
