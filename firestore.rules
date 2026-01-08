@@ -1,21 +1,4 @@
-/**
- * Core Philosophy: This ruleset implements a role-based access control (RBAC) model
- * for the AttendanceEase application. Authorization is determined by a user's
- * role. Admins have broad management capabilities over core data like courses,
- * students, and user roles. Designated 'Users' have the specific permission to mark attendance.
- *
- * Data Structure: The structure separates roles and data entities into distinct
- * top-level collections: /users, /students, and /courses.
- * Course-specific data, such as enrollments (`/students`) and `attendance_records`,
- * are nested within their parent `/courses/{courseId}` document. This hierarchical
- * layout enables intuitive, path-based security and performant queries.
- *
- * Key Security Decisions:
- * - Admin by Email: A user is an 'Admin' if their authenticated email address is 'admin@example.com'.
- *   This is a simple and direct way to manage the primary admin role for this application.
- * - Role by Document Existence: A user is a 'User' if a document with their UID
- *   exists in the `/users` collection. This is a scalable and secure way to manage non-admin roles.
- */
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -40,133 +23,53 @@ service cloud.firestore {
     }
 
     /**
-     * Checks if the currently authenticated user has the 'user' role, which grants
-     * permission to mark attendance. This is verified by checking for their
-     * user UID in the /users collection.
-     */
-    function isUser() {
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
-    }
-
-    /**
-     * Checks if the user is either an Admin or a User. This role is used for
-     * read access to shared data like courses and students.
-     */
-    function isAttendanceMarker() {
-      return isAdmin() || isUser();
-    }
-
-    /**
      * Checks if the currently authenticated user's UID matches the provided docId.
      * This is the standard pattern for verifying document ownership.
      */
     function isOwner(docId) {
       return isSignedIn() && request.auth.uid == docId;
     }
-
-    /**
-     * Ensures that a document being updated or deleted actually exists.
-     * This prevents write operations on non-existent paths.
-     */
-    function isExistingDoc() {
-      return resource != null;
-    }
-
+    
     // --------------------------------------------------------------------
     // Collection Rules
     // --------------------------------------------------------------------
     
     /**
-     * @description Admin profiles. Only accessible by admins themselves.
-     * @path /admins/{adminId}
-     * @allow (read, update) An admin can read or update their own profile.
-     * @allow (create) An admin can create their own profile document.
-     * @deny (list, delete) No one can list or delete admin profiles.
-     * @principle Enforces self-management for admin profile data.
+     * @description Admin profiles. An admin can read and write their own profile.
      */
     match /admins/{adminId} {
-      allow get: if isOwner(adminId);
-      allow create: if isOwner(adminId);
-      allow update: if isOwner(adminId) && isExistingDoc();
-      allow list, delete: if false;
+      allow get, write: if isOwner(adminId);
     }
 
     /**
-     * @description Profiles for users who can mark attendance. Managed by admins.
-     * @path /users/{userId}
-     * @allow (create) An admin creates a new user profile, or user creates their own.
-     * @allow (get) A user views their own profile, or an admin views any user profile.
-     * @deny (list) An anonymous user attempts to list all users.
-     * @deny (update) A user attempts to update their own profile.
-     * @principle Enforces admin-only management for user roles and credentials.
+     * @description User profiles. Managed by admins.
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
-      allow list: if isAdmin();
-      allow create: if isOwner(userId) || isAdmin();
-      allow update: if isAdmin() && isExistingDoc() && request.resource.data.id == resource.data.id;
-      allow delete: if isAdmin() && isExistingDoc();
+      allow list, write: if isAdmin();
     }
 
     /**
-     * @description Student profiles. Managed by admins, but readable by any user who can mark attendance.
-     * @path /students/{studentId}
-     * @allow (create) An admin adds a new student to the system.
-     * @allow (list) An attendance marker ('user' or 'admin') lists all students.
-     * @deny (update) A 'user' (non-admin) tries to change a student's details.
-     * @deny (delete) Anyone other than an admin tries to delete a student.
-     * @principle Separates write permissions (admin-only) from read permissions (role-based).
+     * @description Student profiles. Readable by any signed-in user, writable by admins.
      */
     match /students/{studentId} {
-      allow get, list: if isAttendanceMarker();
-      allow create: if isAdmin() && request.resource.data.id == studentId;
-      allow update: if isAdmin() && isExistingDoc() && request.resource.data.id == resource.data.id;
-      allow delete: if isAdmin() && isExistingDoc();
+      allow get, list: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     /**
-     * @description Course information. Managed by admins, readable by attendance markers.
-     * @path /courses/{courseId}
-     * @allow (create) An admin creates a new course.
-     * @allow (list) A user or admin lists all available courses.
-     * @deny (update) A non-admin user attempts to change a course description.
-     * @principle Separates write permissions (admin-only) from read permissions (role-based).
+     * @description Course information and nested collections. Readable by any signed-in user, writable by admins.
      */
     match /courses/{courseId} {
-      allow get, list: if isAttendanceMarker();
-      allow create: if isAdmin();
-      allow update: if isAdmin() && isExistingDoc();
-      allow delete: if isAdmin() && isExistingDoc();
+      allow get, list: if isSignedIn();
+      allow write: if isAdmin();
 
       /**
-       * @description Represents student enrollment in a specific course. Managed by admins.
-       * @path /courses/{courseId}/students/{studentId}
-       * @allow (create) An admin enrolls a student in a course.
-       * @allow (list) A user lists all students enrolled in a specific course.
-       * @deny (create) A student tries to enroll themselves in a course.
-       * @principle Validates relational integrity between parent and child documents.
+       * @description Student enrollment and attendance records within a course.
        */
-      match /students/{studentId} {
-        allow get, list: if isAttendanceMarker();
-        allow create: if isAdmin() && request.resource.data.courseId == courseId && request.resource.data.studentId == studentId;
-        allow update: if isAdmin() && isExistingDoc() && request.resource.data.courseId == resource.data.courseId && request.resource.data.studentId == resource.data.studentId;
-        allow delete: if isAdmin() && isExistingDoc();
-      }
-
-      /**
-       * @description Attendance records for a course. Created by 'Users', managed by 'Admins'.
-       * @path /courses/{courseId}/attendance_records/{attendanceRecordId}
-       * @allow (create) A 'user' creates a new attendance record for a student in this course.
-       * @allow (list) An admin lists all attendance records for a course to generate a report.
-       * @deny (create) An admin tries to create an attendance record (must be a 'user').
-       * @deny (update) A 'user' tries to change an attendance record after submitting it.
-       * @principle Enforces creator ownership on create and restricts modification to higher-level roles.
-       */
-      match /attendance_records/{attendanceRecordId} {
-        allow get, list: if isAttendanceMarker();
-        allow create: if isUser() && request.resource.data.markedBy == request.auth.uid && request.resource.data.courseId == courseId;
-        allow update: if isAdmin() && isExistingDoc() && request.resource.data.markedBy == resource.data.markedBy && request.resource.data.courseId == resource.data.courseId;
-        allow delete: if isAdmin() && isExistingDoc();
+      match /{allChildren=**} {
+        allow read: if isSignedIn();
+        allow write: if isAdmin();
       }
     }
   }
