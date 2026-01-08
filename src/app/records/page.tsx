@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Download } from 'lucide-react';
 import type { Student, Course, AttendanceRecord } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, getDocs } from 'firebase/firestore';
+import { collection, query, getDocs, where } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
@@ -34,28 +34,21 @@ export default function RecordsPage() {
   
   const coursesQuery = useMemoFirebase(() => collection(firestore, 'courses'), [firestore]);
   const { data: courses, isLoading: coursesLoading } = useCollection<Course>(coursesQuery);
+  
+  const studentsQuery = useMemoFirebase(() => collection(firestore, 'students'), [firestore]);
+  const { data: allStudents, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
+  const studentMap = useMemo(() => {
+    if (!allStudents) return new Map<string, Student>();
+    return new Map(allStudents.map(s => [s.id, s]));
+  }, [allStudents]);
+
 
   const [selectedClassId, setSelectedClassId] = useState<string | undefined>(undefined);
   const [reportData, setReportData] = useState<TransformedData | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const fetchStudents = async (studentIds: string[]): Promise<Map<string, Student>> => {
-    if (!firestore || studentIds.length === 0) return new Map();
-    const studentMap = new Map<string, Student>();
-    
-    for (let i = 0; i < studentIds.length; i += 30) {
-        const chunk = studentIds.slice(i, i + 30);
-        if (chunk.length > 0) {
-            const studentQuery = query(collection(firestore, 'students'), where('id', 'in', chunk));
-            const snapshot = await getDocs(studentQuery);
-            snapshot.forEach(doc => studentMap.set(doc.id, { id: doc.id, ...doc.data() } as Student));
-        }
-    }
-    return studentMap;
-  };
-
   const handleGenerateRecords = async () => {
-    if (!firestore || !selectedClassId) return;
+    if (!firestore || !selectedClassId || !studentMap.size) return;
 
     setIsGenerating(true);
     setReportData(null);
@@ -65,12 +58,10 @@ export default function RecordsPage() {
 
     const attendanceSnap = await getDocs(attendanceQuery);
     const attendanceRecords = attendanceSnap.docs.map(doc => ({...doc.data(), date: doc.data().date.toDate() } as AttendanceRecord & {date: Date}));
-
+    
     if(attendanceRecords.length > 0) {
-        const studentIds = [...new Set(attendanceRecords.map(rec => rec.studentId))];
-        const studentMap = await fetchStudents(studentIds);
-        
-        const students = Array.from(studentMap.values()).sort((a,b) => (a.studentId || "").localeCompare(b.studentId || ""));
+        const studentIdsInRecords = [...new Set(attendanceRecords.map(rec => rec.studentId))];
+        const students = studentIdsInRecords.map(id => studentMap.get(id)).filter((s): s is Student => !!s).sort((a,b) => (a.studentId || "").localeCompare(b.studentId || ""));
         
         const dateSet = new Set<string>();
         const recordsByStudent: Record<string, Record<string, string>> = {};
@@ -240,8 +231,8 @@ export default function RecordsPage() {
             )}
           </div>
           <div className="self-end">
-            <Button onClick={handleGenerateRecords} disabled={!selectedClassId || isGenerating}>
-                {isGenerating ? 'Fetching...' : 'Fetch Records'}
+            <Button onClick={handleGenerateRecords} disabled={!selectedClassId || isGenerating || studentsLoading}>
+                {isGenerating || studentsLoading ? 'Fetching...' : 'Fetch Records'}
             </Button>
           </div>
         </CardContent>
@@ -330,3 +321,5 @@ export default function RecordsPage() {
     </main>
   );
 }
+
+    
