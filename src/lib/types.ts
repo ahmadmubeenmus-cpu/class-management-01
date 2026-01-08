@@ -1,27 +1,35 @@
-export type Student = {
-  id: string;
-  name: string;
-  studentId: string;
-};
+import { Timestamp } from 'firebase/firestore';
 
-export type Class = {
+export interface UserProfile {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role?: 'admin' | 'user';
+}
+
+export interface Student {
+  id: string;
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
+export interface Course {
+  id: string;
+  courseName: string;
   courseCode: string;
-  schedule: string;
-  location: string;
-  students: Student[];
-};
+  description: string;
+}
 
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
 
-export type AttendanceRecord = {
+export interface AttendanceRecord {
+  id: string;
   studentId: string;
-  date: string; // YYYY-MM-DD
+  courseId: string;
+  date: Timestamp;
   status: AttendanceStatus;
-};
-
-export type ClassAttendance = {
-  classId: string;
-  records: AttendanceRecord[];
-};
+  markedBy: string;
+}

@@ -10,14 +10,12 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from './ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { Checkbox } from './ui/checkbox';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
-import { Label } from './ui/label';
-import type { Class, Student, AttendanceStatus } from '@/lib/types';
+import type { Student, AttendanceStatus, Course } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 interface AttendanceSheetProps {
-  classInfo: Class;
+  classInfo: Course & { students: Student[] };
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -47,11 +45,11 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
   };
   
   const handleSave = () => {
-    // Logic to save attendance data
+    // Logic to save attendance data to Firestore
     console.log('Saving attendance:', attendance);
     toast({
       title: 'Attendance Saved',
-      description: `Attendance for ${classInfo.name} has been recorded.`,
+      description: `Attendance for ${classInfo.courseName} has been recorded.`,
       className: 'bg-accent text-accent-foreground',
     });
     onOpenChange(false);
@@ -61,7 +59,7 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-2xl w-full">
         <SheetHeader>
-          <SheetTitle>Mark Attendance: {classInfo.name}</SheetTitle>
+          <SheetTitle>Mark Attendance: {classInfo.courseName}</SheetTitle>
           <SheetDescription>
             For {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
             Select the status for each student.
@@ -86,7 +84,7 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
             {classInfo.students.map((student) => (
               <TableRow key={student.id}>
                 <TableCell>
-                  <div className="font-medium">{student.name}</div>
+                  <div className="font-medium">{student.firstName} {student.lastName}</div>
                   <div className="text-sm text-muted-foreground">{student.studentId}</div>
                 </TableCell>
                 <RadioGroup 

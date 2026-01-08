@@ -14,24 +14,50 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
+import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 export function AddClassDialog() {
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const [open, setOpen] = useState(false);
+  const [courseName, setCourseName] = useState('');
+  const [courseCode, setCourseCode] = useState('');
+  const [description, setDescription] = useState('');
+
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // In a real app, you'd handle form submission here.
+    if (!courseName || !courseCode) {
+        toast({
+            variant: "destructive",
+            title: "Missing fields",
+            description: "Please fill out all fields.",
+        });
+        return;
+    }
+
+    const coursesCol = collection(firestore, 'courses');
+    addDocumentNonBlocking(coursesCol, {
+        courseName,
+        courseCode,
+        description,
+    });
+    
     toast({
       title: 'Class Added',
       description: 'The new class has been successfully created.',
       className: 'bg-accent text-accent-foreground'
     });
-    // Here you would typically close the dialog, which requires state management.
-    // For this example, we'll just show the toast.
+    setOpen(false);
+    setCourseName('');
+    setCourseCode('');
+    setDescription('');
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" className="h-8 gap-1">
           <PlusCircle className="h-3.5 w-3.5" />
@@ -53,25 +79,19 @@ export function AddClassDialog() {
               <Label htmlFor="name" className="text-right">
                 Class Name
               </Label>
-              <Input id="name" defaultValue="Advanced React" className="col-span-3" />
+              <Input id="name" value={courseName} onChange={e => setCourseName(e.target.value)} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="code" className="text-right">
                 Course Code
               </Label>
-              <Input id="code" defaultValue="CS404" className="col-span-3" />
+              <Input id="code" value={courseCode} onChange={e => setCourseCode(e.target.value)} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="schedule" className="text-right">
-                Schedule
+              <Label htmlFor="description" className="text-right">
+                Description
               </Label>
-              <Input id="schedule" defaultValue="Mon, Wed 14:00-15:30" className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="location" className="text-right">
-                Location
-              </Label>
-              <Input id="location" defaultValue="Eng. Building, Room 210" className="col-span-3" />
+              <Input id="description" value={description} onChange={e => setDescription(e.target.value)} className="col-span-3" />
             </div>
           </div>
           <DialogFooter>

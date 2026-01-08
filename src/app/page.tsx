@@ -1,43 +1,34 @@
-import { Header } from '@/components/header';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DashboardTab } from '@/components/dashboard-tab';
-import { ClassesTab } from '@/components/classes-tab';
-import { ReportsTab } from '@/components/reports-tab';
-import { LayoutDashboard, BookUser, FileText } from 'lucide-react';
+'use client';
+import { useUser } from '@/firebase';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { Login } from '@/components/login';
+import { Dashboard } from '@/components/dashboard';
 
 export default function Home() {
-  return (
-    <div className="flex min-h-screen w-full flex-col bg-muted/40">
-      <Header />
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-        <Tabs defaultValue="dashboard" className="grid w-full">
-          <div className="flex items-center">
-            <TabsList>
-              <TabsTrigger value="dashboard">
-                <LayoutDashboard className="mr-2 h-4 w-4" />
-                Dashboard
-              </TabsTrigger>
-              <TabsTrigger value="classes">
-                <BookUser className="mr-2 h-4 w-4" />
-                Classes
-              </TabsTrigger>
-              <TabsTrigger value="reports">
-                <FileText className="mr-2 h-4 w-4" />
-                Reports
-              </TabsTrigger>
-            </TabsList>
-          </div>
-          <TabsContent value="dashboard">
-            <DashboardTab />
-          </TabsContent>
-          <TabsContent value="classes">
-            <ClassesTab />
-          </TabsContent>
-          <TabsContent value="reports">
-            <ReportsTab />
-          </TabsContent>
-        </Tabs>
-      </main>
-    </div>
-  );
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    // This is a simple protection mechanism.
+    // In a real app, you would have more robust routing and protected routes.
+    if (!isUserLoading && !user) {
+      // If loading is finished and there's no user, we don't need to do anything,
+      // the Login component will be displayed.
+    }
+  }, [user, isUserLoading, router]);
+
+  if (isUserLoading) {
+    return (
+      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
+  return <Dashboard />;
 }

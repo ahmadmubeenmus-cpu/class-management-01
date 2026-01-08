@@ -1,8 +1,8 @@
 'use client';
-import { useState } from 'react';
-import { MoreHorizontal, File, ListFilter } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { MoreHorizontal } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,18 +12,32 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { classes } from '@/lib/data';
-import type { Class } from '@/lib/types';
 import { AddClassDialog } from './add-class-dialog';
 import { BulkUploadDialog } from './bulk-upload-dialog';
 import { AttendanceSheet } from './attendance-sheet';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, CollectionReference, DocumentData } from 'firebase/firestore';
+import type { Course, Student } from '@/lib/types';
+
+
+interface CourseWithStudents extends Course {
+  students: Student[];
+}
+
 
 export function ClassesTab() {
-  const [selectedClass, setSelectedClass] = useState<Class | null>(null);
+  const firestore = useFirestore();
+  const { data: courses, isLoading: coursesLoading } = useCollection<Course>(
+    useMemoFirebase(() => collection(firestore, 'courses'), [firestore])
+  );
+
+  const [selectedClass, setSelectedClass] = useState<CourseWithStudents | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  const handleMarkAttendance = (classItem: Class) => {
-    setSelectedClass(classItem);
+  const handleMarkAttendance = (classItem: Course) => {
+    // This is a placeholder. We will fetch students for the class later.
+    const classWithStudents: CourseWithStudents = { ...classItem, students: [] };
+    setSelectedClass(classWithStudents);
     setIsSheetOpen(true);
   };
   
@@ -45,7 +59,7 @@ export function ClassesTab() {
             <TableHeader>
               <TableRow>
                 <TableHead>Class Name</TableHead>
-                <TableHead className="hidden md:table-cell">Schedule</TableHead>
+                <TableHead className="hidden md:table-cell">Course Code</TableHead>
                 <TableHead className="hidden md:table-cell">Students</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
@@ -53,15 +67,16 @@ export function ClassesTab() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {classes.map((classItem) => (
+              {coursesLoading && <TableRow><TableCell colSpan={4}>Loading...</TableCell></TableRow>}
+              {courses?.map((classItem) => (
                 <TableRow key={classItem.id}>
                   <TableCell>
-                    <div className="font-medium">{classItem.name}</div>
+                    <div className="font-medium">{classItem.courseName}</div>
                     <div className="text-sm text-muted-foreground">{classItem.courseCode}</div>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">{classItem.schedule}</TableCell>
+                  <TableCell className="hidden md:table-cell">{classItem.courseCode}</TableCell>
                   <TableCell className="hidden md:table-cell">
-                    <Badge variant="outline">{classItem.students.length} Students</Badge>
+                    <Badge variant="outline">_ Students</Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-2">
