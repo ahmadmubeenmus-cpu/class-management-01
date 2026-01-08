@@ -78,10 +78,18 @@ service cloud.firestore {
     // Collection Rules
     // --------------------------------------------------------------------
     
-    // The /admins collection is no longer needed for authorization,
-    // but we can keep rules for it in case it's used for storing profile data.
+    /**
+     * @description Admin profiles. Only accessible by admins themselves.
+     * @path /admins/{adminId}
+     * @allow (get) An admin can read their own profile.
+     * @allow (create) An admin can create their own profile.
+     * @allow (update) An admin can update their own profile.
+     * @deny (list, delete) No one can list or delete admin profiles.
+     * @principle Enforces self-management for admin profile data.
+     */
     match /admins/{adminId} {
-      allow read, write: if isAdmin();
+      allow get, create, update: if isAdmin() && isOwner(adminId);
+      allow list, delete: if false;
     }
 
     /**
