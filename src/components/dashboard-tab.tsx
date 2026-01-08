@@ -3,16 +3,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { StatCard } from '@/components/stat-card';
 import { Users, Book, Percent, CalendarClock } from 'lucide-react';
-import { useMemo } from 'react';
-import { useCollection } from '@/firebase';
+import { useMemoFirebase, useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
 
 export function DashboardTab() {
     const firestore = useFirestore();
 
-    const { data: students } = useCollection(useMemo(() => collection(firestore, 'students'), [firestore]));
-    const { data: courses } = useCollection(useMemo(() => collection(firestore, 'courses'), [firestore]));
+    const studentsQuery = useMemoFirebase(() => collection(firestore, 'students'), [firestore]);
+    const { data: students } = useCollection(studentsQuery);
+    
+    const coursesQuery = useMemoFirebase(() => collection(firestore, 'courses'), [firestore]);
+    const { data: courses } = useCollection(coursesQuery);
     
     const totalStudents = students?.length || 0;
     const totalClasses = courses?.length || 0;

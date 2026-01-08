@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,7 +16,7 @@ import { AddClassDialog } from './add-class-dialog';
 import { BulkUploadDialog } from './bulk-upload-dialog';
 import { AttendanceSheet } from './attendance-sheet';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, CollectionReference, DocumentData } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import type { Course, Student } from '@/lib/types';
 
 
@@ -27,9 +27,8 @@ interface CourseWithStudents extends Course {
 
 export function ClassesTab() {
   const firestore = useFirestore();
-  const { data: courses, isLoading: coursesLoading } = useCollection<Course>(
-    useMemoFirebase(() => collection(firestore, 'courses'), [firestore])
-  );
+  const coursesQuery = useMemoFirebase(() => collection(firestore, 'courses'), [firestore]);
+  const { data: courses, isLoading: coursesLoading } = useCollection<Course>(coursesQuery);
 
   const [selectedClass, setSelectedClass] = useState<CourseWithStudents | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);

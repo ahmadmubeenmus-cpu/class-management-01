@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from './ui/button';
@@ -24,8 +24,11 @@ interface ReportData {
 
 export function ReportsTab() {
   const firestore = useFirestore();
-  const { data: courses } = useCollection<Course>(useMemoFirebase(() => collection(firestore, 'courses'), [firestore]));
-  const { data: students } = useCollection<Student>(useMemoFirebase(() => collection(firestore, 'students'), [firestore]));
+  const coursesQuery = useMemoFirebase(() => collection(firestore, 'courses'), [firestore]);
+  const { data: courses } = useCollection<Course>(coursesQuery);
+
+  const studentsQuery = useMemoFirebase(() => collection(firestore, 'students'), [firestore]);
+  const { data: students } = useCollection<Student>(studentsQuery);
 
   const [selectedClassId, setSelectedClassId] = useState<string>('all');
   const [reportData, setReportData] = useState<ReportData[]>([]);
@@ -171,7 +174,7 @@ export function ReportsTab() {
                 {reportData.map(({ student, class: c, percentage, present, absent, late, excused }) => (
                   <TableRow key={student.id}>
                     <TableCell>
-                      <div className="font-medium">{student.firstName} {student.lastName}</div>
+                      <div className="font-medium">{student.firstName} ${student.lastName}</div>
                       <div className="text-sm text-muted-foreground">{student.studentId}</div>
                     </TableCell>
                     {selectedClassId === 'all' && <TableCell>{c.courseName}</TableCell>}
