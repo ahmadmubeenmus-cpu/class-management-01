@@ -1,13 +1,13 @@
 'use client';
 import { useState } from 'react';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-} from '@/components/ui/sheet';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
 
-interface AttendanceSheetProps {
+interface AttendanceDialogProps {
   classInfo: Course & { students: Student[] };
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -30,7 +30,7 @@ interface AttendanceSheetProps {
 
 type StudentAttendanceState = Record<string, AttendanceStatus>;
 
-export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceSheetProps) {
+export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [attendance, setAttendance] = useState<StudentAttendanceState>(() => {
@@ -108,14 +108,14 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-2xl w-full">
-        <SheetHeader>
-          <SheetTitle>Mark Attendance: {classInfo.courseName}</SheetTitle>
-          <SheetDescription>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl w-full">
+        <DialogHeader>
+          <DialogTitle>Mark Attendance: {classInfo.courseName}</DialogTitle>
+          <DialogDescription>
             Select the date and mark the status for each student.
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
         
         <div className="my-4 flex justify-between items-center gap-2">
             <Popover>
@@ -133,11 +133,11 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
                     <Calendar
-                    mode="single"
-                    selected={attendanceDate}
-                    onSelect={setAttendanceDate}
-                    disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                    initialFocus
+                        mode="single"
+                        selected={attendanceDate}
+                        onSelect={setAttendanceDate}
+                        disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                        initialFocus
                     />
                 </PopoverContent>
             </Popover>
@@ -147,7 +147,7 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
             </div>
         </div>
 
-        <div className="overflow-y-auto" style={{maxHeight: 'calc(100vh - 250px)'}}>
+        <div className="overflow-y-auto" style={{maxHeight: 'calc(100vh - 350px)'}}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -185,11 +185,11 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
           </TableBody>
         </Table>
         </div>
-        <SheetFooter className='mt-4'>
+        <DialogFooter className='mt-4'>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSave}>Save Attendance</Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

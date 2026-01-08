@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import type { Course, Student } from '@/lib/types';
-import { AttendanceSheet } from '@/components/attendance-sheet';
+import { AttendanceDialog } from '@/components/attendance-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface CourseWithStudents extends Course {
@@ -123,7 +123,7 @@ function AttendanceContent() {
         </CardContent>
       </Card>
       {selectedClass && isSheetOpen && (
-        <AttendanceSheet 
+        <AttendanceDialog 
             classInfo={selectedClass} 
             open={isSheetOpen}
             onOpenChange={handleCloseAttendanceSheet}
