@@ -7,9 +7,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { initializeApp, getApps, App } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
+import * as admin from 'firebase-admin';
 
 // Define the input schema for the deleteUser flow
 export const DeleteUserInputSchema = z.object({
@@ -24,20 +22,10 @@ export const DeleteUserOutputSchema = z.object({
 });
 export type DeleteUserOutput = z.infer<typeof DeleteUserOutputSchema>;
 
-
-// Helper function to initialize Firebase Admin SDK
-function getAdminApp() {
-    if (getApps().length > 0) {
-        return getApps()[0]!;
-    }
-    return initializeApp();
-}
-
 // Exported wrapper function to be called from the client
 export async function deleteUser(input: DeleteUserInput): Promise<DeleteUserOutput> {
   return deleteUserFlow(input);
 }
-
 
 const deleteUserFlow = ai.defineFlow(
   {
@@ -47,9 +35,15 @@ const deleteUserFlow = ai.defineFlow(
   },
   async (input) => {
     const { userId } = input;
-    const adminApp = getAdminApp();
-    const auth = getAuth(adminApp);
-    const firestore = getFirestore(adminApp);
+
+    // Initialize Firebase Admin SDK if it's not already initialized.
+    // This is the correct pattern for serverless environments.
+    if (admin.apps.length === 0) {
+      admin.initializeApp();
+    }
+
+    const auth = admin.auth();
+    const firestore = admin.firestore();
 
     try {
       // Step 1: Delete the user from Firebase Authentication
@@ -67,32 +61,31 @@ const deleteUserFlow = ai.defineFlow(
         message: `Successfully deleted user ${userId}.`,
       };
     } catch (error: any) {
-      console.error('Error deleting user:', error);
-      
-      // Provide more specific error messages
-      let errorMessage = 'An unexpected error occurred while deleting the user.';
+      // If the user is already deleted from Auth, but not Firestore.
       if (error.code === 'auth/user-not-found') {
-        // If user not in Auth, still try to delete from Firestore as a cleanup
         try {
             const userDocRef = firestore.collection('users').doc(userId);
             const userDoc = await userDocRef.get();
             if(userDoc.exists) {
                 await userDocRef.delete();
+                return {
+                    success: true,
+                    message: `User not found in Authentication, but was cleaned up from Firestore.`,
+                };
             }
+            // If user doesn't exist in Auth or Firestore, it's a success.
             return {
                 success: true,
-                message: `User not found in Authentication, but was cleaned up from Firestore.`,
+                message: `User ${userId} does not exist in Authentication or Firestore.`,
             };
-        } catch (dbError) {
-             errorMessage = "User not found in Auth, and failed to delete from Firestore.";
+        } catch (dbError: any) {
+             // We must throw an error to signal failure to the caller
+             throw new Error(`User not found in Auth, and failed to delete from Firestore: ${dbError.message}`);
         }
-
-      } else if (error.message) {
-        errorMessage = error.message;
       }
       
-      // We must throw an error to signal failure to the caller
-      throw new Error(errorMessage);
+      // For any other errors, re-throw to signal failure.
+      throw new Error(error.message || 'An unexpected error occurred while deleting the user.');
     }
   }
 );
