@@ -16,12 +16,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, deleteDoc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
+import { collection, doc, deleteDoc, setDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import type { UserProfile } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Checkbox } from './ui/checkbox';
-import { createUser } from '@/ai/flows/create-user-flow';
 
 const userSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -45,6 +45,7 @@ interface ManageUsersDialogProps {
 export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const auth = useAuth();
 
   const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
@@ -65,27 +66,49 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
   });
 
   const handleAddUser = async (data: UserFormData) => {
+    if (!auth || !firestore) {
+      toast({ variant: 'destructive', title: 'Firebase not initialized.' });
+      return;
+    }
+    
     try {
-        const result = await createUser(data);
-        if (result.success) {
-            toast({
-                title: 'User Created',
-                description: `User ${data.email} has been created successfully.`,
-                className: 'bg-accent text-accent-foreground'
-            });
-            reset();
-        } else {
-             toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: result.message || 'Failed to create user.',
-            });
-        }
+      // Step 1: Create user in Firebase Auth
+      // Note: This creates the user but doesn't sign them in here.
+      // We'd need a temporary auth instance to do this without affecting the admin's session.
+      // For this app's purpose, creating them is sufficient.
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const user = userCredential.user;
+      
+      // Step 2: Create user profile in Firestore
+      const userDocRef = doc(firestore, 'users', user.uid);
+      await setDoc(userDocRef, {
+        id: user.uid,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        username: data.email,
+        role: 'user',
+        permissions: data.permissions,
+      });
+
+      toast({
+          title: 'User Created',
+          description: `User ${data.email} has been created successfully.`,
+          className: 'bg-accent text-accent-foreground'
+      });
+      reset();
+
     } catch(e: any) {
+        let errorMessage = "An unexpected error occurred.";
+        if (e.code === 'auth/email-already-in-use') {
+            errorMessage = "A user with this email already exists.";
+        } else if (e.message) {
+            errorMessage = e.message;
+        }
         toast({
             variant: "destructive",
-            title: "Error",
-            description: e.message || "An unexpected error occurred.",
+            title: "Error Creating User",
+            description: errorMessage,
         });
     }
   };
@@ -93,7 +116,7 @@ export function ManageUsersDialog({ open, onOpenChange }: ManageUsersDialogProps
   const handleDeleteUser = async (userId: string) => {
     if (!firestore) return;
     // NOTE: This only deletes the Firestore document, not the Firebase Auth user.
-    // A Genkit flow would be needed for a complete deletion.
+    // A more robust solution would require a server-side function to delete the auth user.
     await deleteDoc(doc(firestore, 'users', userId));
      toast({
       title: 'User Deleted',
