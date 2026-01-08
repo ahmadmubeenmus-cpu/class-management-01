@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, BookUser, FileText, Users, School, User } from "lucide-react";
+import { LayoutDashboard, BookUser, FileText, Users, School, User, Database } from "lucide-react";
 import { Badge } from "./ui/badge";
 
 const navItems = [
@@ -11,6 +11,7 @@ const navItems = [
     { href: "/classes", label: "Classes", icon: School },
     { href: "/students", label: "Students", icon: Users },
     { href: "/attendance", label: "Attendance", icon: BookUser },
+    { href: "/records", label: "Records", icon: Database },
     { href: "/reports", label: "Reports", icon: FileText },
     { href: "/admin", label: "Admin", icon: User },
 ]
@@ -27,7 +28,8 @@ export function SidebarNav({ onLinkClick }: { onLinkClick?: () => void }) {
           onClick={onLinkClick}
           className={cn(
             "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-            pathname === href && "bg-muted text-primary"
+            pathname.startsWith(href) && href !== "/" && "bg-muted text-primary",
+            pathname === "/" && href === "/dashboard" && "bg-muted text-primary"
           )}
         >
           <Icon className="h-4 w-4" />

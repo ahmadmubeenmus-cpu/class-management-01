@@ -15,6 +15,11 @@ import type { Student, AttendanceStatus, Course } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
 import { collection, writeBatch, doc, Timestamp } from 'firebase/firestore';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { Calendar } from './ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 
 interface AttendanceSheetProps {
@@ -35,6 +40,7 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
     });
     return initialState;
   });
+  const [attendanceDate, setAttendanceDate] = useState<Date>(new Date());
 
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
     setAttendance(prev => ({ ...prev, [studentId]: status }));
@@ -68,7 +74,7 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
                 id: newRecordRef.id,
                 studentId: studentId,
                 courseId: classInfo.id,
-                date: Timestamp.now(),
+                date: Timestamp.fromDate(attendanceDate),
                 status: status,
                 markedBy: "admin", // Placeholder for user who marked attendance
             });
@@ -78,7 +84,7 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
         
         toast({
           title: 'Attendance Saved',
-          description: `Attendance for ${classInfo.courseName} has been recorded.`,
+          description: `Attendance for ${classInfo.courseName} on ${format(attendanceDate, 'PPP')} has been recorded.`,
           className: 'bg-accent text-accent-foreground',
         });
         onOpenChange(false);
@@ -98,14 +104,39 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
         <SheetHeader>
           <SheetTitle>Mark Attendance: {classInfo.courseName}</SheetTitle>
           <SheetDescription>
-            For {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
-            Select the status for each student.
+            Select the date and mark the status for each student.
           </SheetDescription>
         </SheetHeader>
-        <div className="my-4 flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => markAll('present')}>Mark All Present</Button>
-            <Button variant="outline" size="sm" onClick={() => markAll('absent')}>Mark All Absent</Button>
+        
+        <div className="my-4 flex justify-between items-center gap-2">
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button
+                    variant={"outline"}
+                    className={cn(
+                        "w-[280px] justify-start text-left font-normal",
+                        !attendanceDate && "text-muted-foreground"
+                    )}
+                    >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {attendanceDate ? format(attendanceDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                    <Calendar
+                    mode="single"
+                    selected={attendanceDate}
+                    onSelect={(date) => date && setAttendanceDate(date)}
+                    initialFocus
+                    />
+                </PopoverContent>
+            </Popover>
+            <div className='flex gap-2'>
+                <Button variant="outline" size="sm" onClick={() => markAll('present')}>Mark All Present</Button>
+                <Button variant="outline" size="sm" onClick={() => markAll('absent')}>Mark All Absent</Button>
+            </div>
         </div>
+
         <div className="overflow-y-auto" style={{maxHeight: 'calc(100vh - 250px)'}}>
         <Table>
           <TableHeader>
