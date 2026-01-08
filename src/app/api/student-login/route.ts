@@ -1,24 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
+import { initializeApp, getApps, App } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { Student } from '@/lib/types';
 
-// This is a placeholder for a secure way to store and access service account keys.
-// In a real production environment, use a secret manager.
-const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
-  ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
-  : undefined;
 
 let adminApp: App;
 if (!getApps().length) {
-    if(serviceAccount) {
-        adminApp = initializeApp({
-            credential: cert(serviceAccount)
-        });
-    } else {
-        // This will use Application Default Credentials in a GCP environment.
-        adminApp = initializeApp();
-    }
+    // This will use Application Default Credentials in a GCP environment.
+    adminApp = initializeApp();
 } else {
   adminApp = getApps()[0]!;
 }
