@@ -16,8 +16,8 @@ import { Label } from '@/components/ui/label';
 import { Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Papa from 'papaparse';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, writeBatch } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { collection, writeBatch, doc } from 'firebase/firestore';
 
 export function BulkUploadDialog() {
   const { toast } = useToast();
@@ -48,11 +48,11 @@ export function BulkUploadDialog() {
       skipEmptyLines: true,
       complete: async (results) => {
         const students = results.data as { studentId: string; name: string }[];
-        if (!students.length) {
+        if (!students.length || !results.meta.fields?.includes('studentId') || !results.meta.fields?.includes('name')) {
             toast({
                 variant: 'destructive',
-                title: 'Empty or invalid file',
-                description: 'The CSV file is empty or does not contain the required headers (studentId, name).',
+                title: 'Invalid File Format',
+                description: 'The CSV file is empty or does not contain the required headers: "studentId" and "name".',
             });
             setIsUploading(false);
             return;
@@ -63,45 +63,25 @@ export function BulkUploadDialog() {
             const studentsCollection = collection(firestore, 'students');
 
             students.forEach(student => {
-                const nameParts = student.name.split(' ');
-                const firstName = nameParts[0] || '';
-                const lastName = nameParts.slice(1).join(' ') || '';
-                const email = `${student.studentId}@example.com`; // Create a dummy email
+                if (student.studentId && student.name) {
+                    const nameParts = student.name.trim().split(' ');
+                    const firstName = nameParts[0] || '';
+                    const lastName = nameParts.slice(1).join(' ') || '';
+                    const email = `${student.studentId.replace(/\s/g, '')}@example.com`;
 
-                const studentData = {
-                    studentId: student.studentId,
-                    firstName,
-                    lastName,
-                    email
-                };
-
-                const docRef = addDocumentNonBlocking(studentsCollection, studentData);
-                // The addDocumentNonBlocking doesn't return a ref immediately for batching,
-                // so we can't easily add the ID. We'll handle this differently if needed,
-                // for now we add student without the 'id' field in the document.
+                    const newStudentRef = doc(studentsCollection);
+                    
+                    batch.set(newStudentRef, {
+                        id: newStudentRef.id,
+                        studentId: student.studentId,
+                        firstName,
+                        lastName,
+                        email,
+                    });
+                }
             });
             
-            // This is a simplified approach. For real batching with non-blocking writes,
-            // we'd need a different strategy. For now, we'll write them one by one but show a single message.
-            // A more robust solution would use a batched write.
-            for (const student of students) {
-              const nameParts = student.name.split(' ');
-              const firstName = nameParts[0] || '';
-              const lastName = nameParts.slice(1).join(' ') || '';
-              const email = `${student.studentId.replace(/\s/g, '')}@example.com`;
-
-              const studentDoc = {
-                studentId: student.studentId,
-                firstName: firstName,
-                lastName: lastName,
-                email: email,
-              };
-              const docRef = await addDocumentNonBlocking(collection(firestore, 'students'), studentDoc);
-              if (docRef) {
-                updateDocumentNonBlocking(docRef, { id: docRef.id });
-              }
-            }
-
+            await batch.commit();
 
             toast({
                 title: 'Upload Successful',
@@ -161,7 +141,7 @@ export function BulkUploadDialog() {
             {' '}to see the required format.
         </p>
         <DialogFooter className="sm:justify-start">
-            <Button type="button" onClick={handleUpload} disabled={isUploading}>
+            <Button type="button" onClick={handleUpload} disabled={isUploading || !file}>
                 {isUploading ? 'Uploading...' : 'Upload and Process'}
             </Button>
         </DialogFooter>
