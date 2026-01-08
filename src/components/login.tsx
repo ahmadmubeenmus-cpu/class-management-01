@@ -17,7 +17,7 @@ import {
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { GraduationCap } from 'lucide-react';
-import { doc, getFirestore, setDoc, getDoc } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 
 export function Login() {
   const auth = useAuth();
@@ -25,65 +25,44 @@ export function Login() {
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('password');
 
-  // We'll construct a fake email from the username for Firebase Auth
   const getEmailFromUsername = (uname: string) => `${uname}@example.com`;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth) {
-        toast({
-            variant: "destructive",
-            title: "Firebase not initialized",
-        });
-        return;
+      toast({
+        variant: 'destructive',
+        title: 'Firebase not initialized',
+      });
+      return;
     }
     const email = getEmailFromUsername(username);
 
     try {
-      // First, try to sign in
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, email, password);
       toast({ title: 'Signed in successfully' });
-    } catch (signInError: any) {
-      // If sign in fails, check if it's because the user doesn't exist
-      if (signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/user-not-found') {
-        // User does not exist, so create them
+    } catch (error: any) {
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
         try {
-          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-          const user = userCredential.user;
+          // If sign-in fails because user doesn't exist, create the user
+          await createUserWithEmailAndPassword(auth, email, password);
           toast({
             title: 'Account created',
             description: 'First time login, creating your account...',
           });
-          
-          // IMPORTANT: If this is the 'admin' user, create their document in the admins collection
-          // This is the crucial step to grant admin permissions
-          if (username === 'admin') {
-            const firestore = getFirestore();
-            const adminDocRef = doc(firestore, 'admins', user.uid);
-
-            await setDoc(adminDocRef, {
-              id: user.uid,
-              username: 'admin',
-              firstName: 'Admin',
-              lastName: 'User',
-              role: 'super_admin'
-            });
-          }
-
         } catch (signUpError: any) {
-            // Handle errors during sign-up (e.g., weak password)
-            toast({
-                variant: 'destructive',
-                title: 'Sign-up Failed',
-                description: signUpError.message || 'An unknown error occurred during sign up.',
-            });
+          toast({
+            variant: 'destructive',
+            title: 'Sign-up Failed',
+            description: signUpError.message || 'An unknown error occurred during sign up.',
+          });
         }
       } else {
-        // Handle other sign-in errors (e.g., wrong password)
+        // Handle other sign-in errors like wrong password
         toast({
           variant: 'destructive',
           title: 'Authentication Error',
-          description: signInError.message || 'An unknown error occurred.',
+          description: error.message || 'An unknown error occurred.',
         });
       }
     }

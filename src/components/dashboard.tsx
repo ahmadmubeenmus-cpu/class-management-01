@@ -6,26 +6,17 @@ import { ClassesTab } from '@/components/classes-tab';
 import { ReportsTab } from '@/components/reports-tab';
 import { LayoutDashboard, BookUser, FileText, Users } from 'lucide-react';
 import { AdminTab } from './admin-tab';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, DocumentData } from 'firebase/firestore';
+import { useUser } from '@/firebase';
 
 export function Dashboard() {
   const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
 
-  const adminRef = useMemoFirebase(
-    () => (user ? doc(firestore, 'admins', user.uid) : null),
-    [user, firestore]
-  );
-  const { data: adminDoc, isLoading: isAdminLoading } = useDoc<DocumentData>(adminRef);
+  const isAdmin = user?.email === 'admin@example.com';
 
-  const isAdmin = !!adminDoc;
-  const isLoading = isUserLoading || isAdminLoading;
-
-  if (isLoading) {
+  if (isUserLoading) {
     return (
         <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40">
-            <p>Verifying permissions...</p>
+            <p>Loading...</p>
         </div>
     );
   }
