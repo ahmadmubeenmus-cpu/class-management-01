@@ -1,7 +1,6 @@
 import Link from 'next/link';
-import { Sheet, GraduationCap } from 'lucide-react';
+import { GraduationCap } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from './ui/button';
 
 export function Header() {
   return (
@@ -15,8 +14,8 @@ export function Header() {
           <h1 className="text-xl font-bold font-headline">AttendanceEase</h1>
         </Link>
         <Avatar>
-          <AvatarImage src="https://picsum.photos/seed/user/40/40" alt="User" />
-          <AvatarFallback>CR</AvatarFallback>
+          <AvatarImage src="https://picsum.photos/seed/admin/40/40" alt="Admin" />
+          <AvatarFallback>AD</AvatarFallback>
         </Avatar>
       </nav>
     </header>

@@ -2,77 +2,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --------------------------------------------------------------------
-    // Helper Functions
-    // --------------------------------------------------------------------
-
-    /**
-     * Checks if a user is authenticated.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * Checks if the currently authenticated user is an administrator by verifying
-     * their email address.
-     */
-    function isAdmin() {
-      return isSignedIn() && request.auth.token.email == 'admin@example.com';
-    }
-
-    /**
-     * Checks if the currently authenticated user's UID matches the provided docId.
-     * This is the standard pattern for verifying document ownership.
-     */
-    function isOwner(docId) {
-      return isSignedIn() && request.auth.uid == docId;
-    }
-    
-    // --------------------------------------------------------------------
-    // Collection Rules
-    // --------------------------------------------------------------------
-    
-    /**
-     * @description Admin profiles. An admin can read and write their own profile.
-     * Any signed in user can read any admin profile.
-     */
-    match /admins/{adminId} {
-      allow read: if isSignedIn();
-      allow write: if isOwner(adminId);
-    }
-
-    /**
-     * @description User profiles. Managed by admins. Users can read their own profile.
-     */
-    match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow list, write: if isAdmin();
-    }
-
-    /**
-     * @description Student profiles. Readable by any signed-in user, writable by admins.
-     */
-    match /students/{studentId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-
-    /**
-     * @description Course information and nested collections. Readable by any signed-in user, writable by admins.
-     */
-    match /courses/{courseId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-
-      /**
-       * @description Student enrollment and attendance records within a course.
-       */
-      match /{allChildren=**} {
-        allow read: if isSignedIn();
-        allow write: if isAdmin();
-      }
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }

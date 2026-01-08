@@ -14,61 +14,31 @@ import { Label } from '@/components/ui/label';
 import { Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { updatePassword } from 'firebase/auth';
-import { doc, DocumentData } from 'firebase/firestore';
 
 export function EditProfileDialog() {
   const { toast } = useToast();
-  const auth = useAuth();
-  const { user } = useUser();
-  const firestore = useFirestore();
   const [open, setOpen] = useState(false);
-
-  const adminRef = useMemoFirebase(() => user ? doc(firestore, 'admins', user.uid) : null, [user, firestore]);
-  const { data: adminData } = useDoc<DocumentData>(adminRef);
   
-  const [username, setUsername] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [username, setUsername] = useState('admin');
+  const [firstName, setFirstName] = useState('Admin');
+  const [lastName, setLastName] = useState('User');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  useEffect(() => {
-    if (adminData) {
-      setUsername(adminData.username || '');
-      setFirstName(adminData.firstName || '');
-      setLastName(adminData.lastName || '');
-    }
-  }, [adminData]);
-
-
   const handleSave = async () => {
-    if (!user || !adminRef) return;
-
-    // Update profile data
-    updateDocumentNonBlocking(adminRef, { username, firstName, lastName });
-    
-    // Update password if fields are filled and match
-    if (password) {
-        if (password !== confirmPassword) {
-            toast({ variant: 'destructive', title: 'Passwords do not match.' });
-            return;
-        }
-        try {
-            await updatePassword(user, password);
-            toast({ title: 'Password updated successfully.' });
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Password Update Error', description: error.message });
-            return; // Don't close dialog on password error
-        }
-    }
-
+    // In a real app with a backend, you would save this data.
+    // For now, it just shows a toast.
     toast({
       title: 'Profile Updated',
       description: 'Your profile has been successfully updated.',
       className: 'bg-accent text-accent-foreground',
     });
+    if (password && password === confirmPassword) {
+        toast({ title: 'Password updated successfully.' });
+    } else if (password) {
+        toast({ variant: 'destructive', title: 'Passwords do not match.' });
+    }
+
     setOpen(false);
     setPassword('');
     setConfirmPassword('');

@@ -6,21 +6,8 @@ import { ClassesTab } from '@/components/classes-tab';
 import { ReportsTab } from '@/components/reports-tab';
 import { LayoutDashboard, BookUser, FileText, Users } from 'lucide-react';
 import { AdminTab } from './admin-tab';
-import { useUser } from '@/firebase';
 
 export function Dashboard() {
-  const { user, isUserLoading } = useUser();
-
-  const isAdmin = user?.email === 'admin@example.com';
-
-  if (isUserLoading) {
-    return (
-        <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40">
-            <p>Loading...</p>
-        </div>
-    );
-  }
-
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Header />
@@ -40,12 +27,10 @@ export function Dashboard() {
                 <FileText className="mr-2 h-4 w-4" />
                 Reports
               </TabsTrigger>
-              {isAdmin && (
-                <TabsTrigger value="admin">
-                  <Users className="mr-2 h-4 w-4" />
-                  Admin
-                </TabsTrigger>
-              )}
+              <TabsTrigger value="admin">
+                <Users className="mr-2 h-4 w-4" />
+                Admin
+              </TabsTrigger>
             </TabsList>
           </div>
           <TabsContent value="dashboard">
@@ -57,11 +42,9 @@ export function Dashboard() {
           <TabsContent value="reports">
             <ReportsTab />
           </TabsContent>
-          {isAdmin && (
-            <TabsContent value="admin">
-              <AdminTab />
-            </TabsContent>
-          )}
+          <TabsContent value="admin">
+            <AdminTab />
+          </TabsContent>
         </Tabs>
       </main>
     </div>
