@@ -31,6 +31,7 @@
  *
  * Structural Segregation: The system segregates users by role into distinct
  * collections (`/admins` and `/users`). This provides a clear, secure, and
+
  * performant way to check roles using `exists()` calls, which is superior to
  * managing roles within a single, large users collection.
  */
@@ -104,9 +105,9 @@ service cloud.firestore {
      * @principle Restricts access to a user's own data tree and enforces role-based creation.
      */
     match /admins/{adminId} {
-      allow get: if isOwner(adminId);
-      allow list: if false;
-      // Allow creation if the user is creating their own document, or if an admin is creating one.
+      allow get: if isOwner(adminId) || isAdmin();
+      allow list: if isAdmin();
+      // Allow creation if the user is creating their OWN document, or if an admin is creating for someone else.
       allow create: if isOwner(adminId) || isAdmin();
       allow update: if isOwner(adminId) && request.resource.data.id == resource.data.id;
       allow delete: if isAdmin() && !isOwner(adminId) && isExistingDoc();
@@ -123,8 +124,8 @@ service cloud.firestore {
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
-      allow list: if false;
-      // Allow creation if the user is creating their own document, or if an admin is creating one.
+      allow list: if isAdmin();
+      // Allow creation if the user is creating their OWN document, or if an admin is creating for someone else.
       allow create: if isOwner(userId) || isAdmin();
       allow update: if isAdmin() && isExistingDoc() && request.resource.data.id == resource.data.id;
       allow delete: if isAdmin() && isExistingDoc();

@@ -28,22 +28,23 @@ export function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth || !firestore) return;
+    if (!auth || !firestore) {
+        toast({
+            variant: "destructive",
+            title: "Firebase not initialized",
+            description: "The application is not connected to the backend.",
+        });
+        return;
+    }
 
     try {
-      // First, just try to sign in.
       await signInWithEmailAndPassword(auth, email, password);
       toast({ title: 'Signed in successfully' });
     } catch (signInError: any) {
-      // If sign-in fails, check if it's because the user doesn't exist.
-      // 'auth/invalid-credential' is the code for user not found OR wrong password.
-      if (
-        signInError.code === 'auth/invalid-credential' &&
-        email === 'admin@example.com'
-      ) {
-        // Attempt to create the user. If this fails, it's likely because the user
-        // already exists, which means the original password attempt was wrong.
+      // 'auth/invalid-credential' can mean user not found or wrong password.
+      if (signInError.code === 'auth/invalid-credential') {
         try {
+          // Attempt to create the user since they might not exist.
           const userCredential = await createUserWithEmailAndPassword(
             auth,
             email,
@@ -51,32 +52,33 @@ export function Login() {
           );
           const user = userCredential.user;
 
-          // CRITICAL: Create the admin document in Firestore to grant permissions.
-          const adminRef = doc(firestore, 'admins', user.uid);
-          await setDoc(adminRef, {
-            id: user.uid,
-            email: user.email,
-            firstName: 'Admin',
-            lastName: 'User',
-            role: 'super_admin',
-          });
+          // CRITICAL: After creating the auth user, create their admin document in Firestore.
+          // This grants them permissions according to the security rules.
+          if (user.email === 'admin@example.com') {
+            const adminRef = doc(firestore, 'admins', user.uid);
+            await setDoc(adminRef, {
+              id: user.uid,
+              email: user.email,
+              firstName: 'Admin',
+              lastName: 'User',
+              role: 'super_admin',
+            });
+          }
 
           toast({
-            title: 'Admin account created',
+            title: 'Account created',
             description: 'Signed in successfully.',
           });
         } catch (signUpError: any) {
-          // If creating the user fails, it's most likely because the user already exists,
-          // which means the original password was incorrect.
-          toast({
-            variant: 'destructive',
-            title: 'Authentication Error',
-            description:
-              'Invalid password. If this is your first time, the admin account may already exist with a different password.',
-          });
+            // If sign-up fails, the user likely exists and the password was wrong.
+            toast({
+                variant: 'destructive',
+                title: 'Login Failed',
+                description: 'Invalid email or password. Please try again.',
+            });
         }
       } else {
-        // For all other errors, show a generic message.
+        // Handle other sign-in errors
         toast({
           variant: 'destructive',
           title: 'Authentication Error',
