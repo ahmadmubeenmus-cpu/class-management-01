@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
 import { AddStudentDialog } from '@/components/add-student-dialog';
@@ -46,6 +46,7 @@ export default function StudentsPage() {
   }, [students]);
 
   const studentsWithoutCredentials = useMemo(() => {
+    if(!sortedStudents) return [];
     return sortedStudents.filter(s => !s.uid || !s.password);
   }, [sortedStudents]);
 

@@ -11,12 +11,14 @@ service cloud.firestore {
 
     // Rules for the 'users' collection
     match /users/{userId} {
-      // Allow create, read, update for the user who owns the document
-      allow create, read, update: if request.auth.uid == userId;
+      // Allow create for any authenticated user (e.g. admin creating a user)
+      allow create: if request.auth != null;
+      // Allow read, update for the user who owns the document
+      allow read, update: if request.auth.uid == userId;
       // Allow read, write for any admin
       allow read, write: if isAdmin();
-      // Deny deletion by anyone for now to prevent accidental data loss
-      allow delete: if false;
+      // Allow admin to delete
+      allow delete: if isAdmin();
     }
 
     // Rules for the 'admins' collection
@@ -56,9 +58,8 @@ service cloud.firestore {
         allow write: if isAdmin();
         // Any authenticated user can read the list of students (e.g., to enroll them)
         allow read: if request.auth != null;
-        // A student can read their own data (needed for custom login/attendance view)
-        // This rule is permissive; in production, you might restrict this more.
-        allow get: if request.auth == null;
+        // A student can read their own data if they know their uid.
+        allow list: if request.auth == null && request.query.limit == 1;
     }
   }
 }

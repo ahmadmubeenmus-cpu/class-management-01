@@ -126,6 +126,7 @@
       "required": [
         "id",
         "uid",
+        "password",
         "firstName",
         "lastName",
         "email"
