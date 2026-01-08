@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { collection, query, where, getDocs, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import type { Student, AttendanceRecord } from '@/lib/types';
@@ -10,9 +9,10 @@ import { format } from 'date-fns';
 import { GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { StudentCourseAttendanceDialog } from '@/components/student-course-attendance-dialog';
 
 interface AttendanceStat {
+    courseId: string;
     courseName: string;
     present: number;
     total: number;
@@ -26,6 +26,8 @@ export default function StudentAttendancePage() {
     const [student, setStudent] = useState<Student | null>(null);
     const [stats, setStats] = useState<AttendanceStat[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [selectedCourse, setSelectedCourse] = useState<AttendanceStat | null>(null);
 
     useEffect(() => {
         const studentData = sessionStorage.getItem('student');
@@ -42,7 +44,6 @@ export default function StudentAttendancePage() {
         const fetchAttendanceData = async () => {
             setIsLoading(true);
             try {
-                // 1. Find which courses the student is enrolled in
                 const coursesRef = collection(firestore, 'courses');
                 const coursesSnap = await getDocs(coursesRef);
                 const enrolledCourses: { id: string; name: string }[] = [];
@@ -60,10 +61,9 @@ export default function StudentAttendancePage() {
                 
                 const statsByCourse: Record<string, AttendanceStat> = {};
 
-                // 2. For each enrolled course, fetch attendance records and calculate stats
                 for (const course of enrolledCourses) {
-                    // Initialize stats for the course
                     statsByCourse[course.id] = {
+                        courseId: course.id,
                         courseName: course.name,
                         present: 0,
                         total: 0,
@@ -71,7 +71,6 @@ export default function StudentAttendancePage() {
                         details: []
                     };
                     
-                    // Fetch all attendance records for the entire course to find total lecture days
                     const allRecordsForCourseRef = collection(firestore, `courses/${course.id}/attendance_records`);
                     const allRecordsSnap = await getDocs(allRecordsForCourseRef);
                     const courseDates = new Set<string>();
@@ -81,8 +80,6 @@ export default function StudentAttendancePage() {
                     const totalLectures = courseDates.size;
                     statsByCourse[course.id].total = totalLectures;
 
-
-                    // Fetch records just for the current student in this course
                     const studentRecordsRef = collection(firestore, `courses/${course.id}/attendance_records`);
                     const q = query(studentRecordsRef, where('studentId', '==', student.id));
                     const studentRecordsSnap = await getDocs(q);
@@ -120,6 +117,11 @@ export default function StudentAttendancePage() {
         router.push('/student/login');
     };
 
+    const handleCardClick = (courseStat: AttendanceStat) => {
+        setSelectedCourse(courseStat);
+        setIsDialogOpen(true);
+    };
+
     if (!student) {
         return (
              <div className="flex h-screen w-full items-center justify-center bg-muted/40">
@@ -146,9 +148,9 @@ export default function StudentAttendancePage() {
                 </div>
 
                 {isLoading && (
-                     <div className='space-y-4'>
-                        <Skeleton className="h-24 w-full" />
-                        <Skeleton className="h-24 w-full" />
+                     <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                        <Skeleton className="h-32 w-full" />
+                        <Skeleton className="h-32 w-full" />
                     </div>
                 )}
                 
@@ -161,51 +163,31 @@ export default function StudentAttendancePage() {
                 )}
 
                 {!isLoading && stats.length > 0 && (
-                    <Accordion type="single" collapsible className="w-full space-y-4">
-                        {stats.map((stat, index) => (
-                           <Card key={index}>
-                             <AccordionItem value={`item-${index}`} className="border-b-0">
-                                <AccordionTrigger className="p-6 hover:no-underline">
-                                    <div className='flex flex-col text-left'>
-                                        <CardTitle>{stat.courseName}</CardTitle>
-                                        <CardDescription className="pt-1">
-                                            Overall: {stat.present} / {stat.total} days present ({stat.percentage}%)
-                                        </CardDescription>
-                                    </div>
-                                </AccordionTrigger>
-                                <AccordionContent className="px-6 pb-6">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Date</TableHead>
-                                                <TableHead className="text-right">Status</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {stat.details.map(record => (
-                                                <TableRow key={record.id}>
-                                                    <TableCell>{format(record.date, 'PPP')}</TableCell>
-                                                    <TableCell className="text-right font-medium">
-                                                        <span className={record.status === 'present' ? 'text-green-600' : 'text-red-600'}>
-                                                            {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
-                                                        </span>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                            {stat.details.length === 0 && (
-                                                <TableRow>
-                                                    <TableCell colSpan={2} className="text-center">No records yet for this class.</TableCell>
-                                                </TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </AccordionContent>
-                            </AccordionItem>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {stats.map((stat) => (
+                           <Card key={stat.courseId} className="cursor-pointer hover:border-primary" onClick={() => handleCardClick(stat)}>
+                             <CardHeader>
+                                <CardTitle>{stat.courseName}</CardTitle>
+                                <CardDescription>
+                                    Overall: {stat.present} / {stat.total} days present
+                                </CardDescription>
+                             </CardHeader>
+                             <CardContent>
+                                <p className='text-2xl font-bold'>{stat.percentage}%</p>
+                             </CardContent>
                            </Card>
                         ))}
-                    </Accordion>
+                    </div>
                 )}
             </main>
+            {selectedCourse && (
+                <StudentCourseAttendanceDialog
+                    open={isDialogOpen}
+                    onOpenChange={setIsDialogOpen}
+                    courseName={selectedCourse.courseName}
+                    attendanceDetails={selectedCourse.details}
+                />
+            )}
         </div>
     );
 }
