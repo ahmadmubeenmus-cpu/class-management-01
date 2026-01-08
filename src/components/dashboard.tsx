@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatCard } from '@/components/stat-card';
-import { Users, Book, Percent, CalendarClock, BookUser, UserPlus, PlusCircle } from 'lucide-react';
+import { Users, Book, BookUser, UserPlus, PlusCircle } from 'lucide-react';
 import { useMemoFirebase, useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import Link from 'next/link';
@@ -22,16 +22,13 @@ export function Dashboard() {
     const totalStudents = students?.length || 0;
     const totalClasses = courses?.length || 0;
 
-    // Mock data for now
-    const overallAttendancePercentage = 92;
-
     const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
 
 
   return (
     <>
     <div className="flex flex-col gap-4 md:gap-8 mt-4">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2">
         <StatCard 
             Icon={Book}
             title="Total Classes"
@@ -43,18 +40,6 @@ export function Dashboard() {
             title="Total Students"
             value={totalStudents.toString()}
             description="Across all classes"
-        />
-        <StatCard 
-            Icon={Percent}
-            title="Overall Attendance"
-            value={`${overallAttendancePercentage}%`}
-            description="Based on all records"
-        />
-        <StatCard 
-            Icon={CalendarClock}
-            title="Classes Today"
-            value="-"
-            description="Scheduled for today"
         />
       </div>
       <Card>
