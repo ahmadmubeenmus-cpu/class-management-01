@@ -52,8 +52,8 @@ export default function ReportsPage() {
     }
     
     const studentsRef = collection(firestore, 'students');
-    const studentsQuery = query(studentsRef, where('id', 'in', studentIds));
-    const studentsSnap = await getDocs(studentsQuery);
+    const studentDocsQuery = query(studentsRef, where('id', 'in', studentIds));
+    const studentsSnap = await getDocs(studentDocsQuery);
     const students = studentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
     students.sort((a,b) => (a.studentId || "").localeCompare(b.studentId || ""));
 
@@ -97,7 +97,7 @@ export default function ReportsPage() {
         reportData.forEach((data, index) => {
             const row = [
                 index + 1,
-                `${data.student.firstName} ${data.student.lastName}`,
+                `"${data.student.firstName} ${data.student.lastName}"`,
                 data.student.studentId,
                 `${data.percentage}%`,
                 data.present,
@@ -108,7 +108,7 @@ export default function ReportsPage() {
         });
 
         const csvString = csvRows.join("\n");
-        const blob = new Blob([csvString], { type: 'text/csv' });
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.setAttribute('hidden', '');

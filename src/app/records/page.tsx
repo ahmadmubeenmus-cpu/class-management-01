@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 interface TransformedData {
   students: Student[];
   dates: string[];
-  recordsByDate: Record<string, Record<string, string>>;
+  recordsByStudent: Record<string, Record<string, string>>;
 }
 
 export default function RecordsPage() {
@@ -32,7 +32,6 @@ export default function RecordsPage() {
     if (!firestore || studentIds.length === 0) return new Map();
     const studentMap = new Map<string, Student>();
     
-    // Fetch students in chunks of 30
     for (let i = 0; i < studentIds.length; i += 30) {
         const chunk = studentIds.slice(i, i + 30);
         if (chunk.length > 0) {
@@ -61,26 +60,28 @@ export default function RecordsPage() {
         const studentMap = await fetchStudents(studentIds);
         
         const students = Array.from(studentMap.values()).sort((a,b) => (a.studentId || "").localeCompare(b.studentId || ""));
-        const studentIdList = students.map(s => s.id);
         
         const dateSet = new Set<string>();
-        const recordsByDate: Record<string, Record<string, string>> = {};
+        const recordsByStudent: Record<string, Record<string, string>> = {};
 
+        students.forEach(student => {
+            recordsByStudent[student.id] = {};
+        });
+        
         attendanceRecords.forEach(record => {
             const dateStr = format(record.date.toDate(), 'yyyy-MM-dd');
             dateSet.add(dateStr);
-            if (!recordsByDate[dateStr]) {
-                recordsByDate[dateStr] = {};
+            if (recordsByStudent[record.studentId]) {
+                 recordsByStudent[record.studentId][dateStr] = record.status === 'present' ? 'P' : 'A';
             }
-            recordsByDate[dateStr][record.studentId] = record.status === 'present' ? 'P' : 'A';
         });
 
-        const sortedDates = Array.from(dateSet).sort((a,b) => new Date(b).getTime() - new Date(a).getTime());
+        const sortedDates = Array.from(dateSet).sort((a,b) => new Date(a).getTime() - new Date(b).getTime());
 
         setReportData({
             students: students,
             dates: sortedDates,
-            recordsByDate: recordsByDate,
+            recordsByStudent: recordsByStudent,
         });
 
     } else {
@@ -93,21 +94,25 @@ export default function RecordsPage() {
   const handleDownload = () => {
     if (!reportData) return;
 
-    const { students, dates, recordsByDate } = reportData;
-    const headers = ["Date", ...students.map(s => `${s.firstName} ${s.lastName} (${s.studentId})`)];
+    const { students, dates, recordsByStudent } = reportData;
+    const headers = ["SR#", "Student Name", "Roll No.", ...dates.map(d => format(new Date(d), 'dd-MMM-yy'))];
     const csvRows = [headers.join(",")];
     
-    dates.forEach(date => {
-        const row = [format(new Date(date), 'PPP')];
-        students.forEach(student => {
-            const status = recordsByDate[date]?.[student.id] || '-';
+    students.forEach((student, index) => {
+        const row = [
+            index + 1,
+            `"${student.firstName} ${student.lastName}"`,
+            student.studentId
+        ];
+        dates.forEach(date => {
+            const status = recordsByStudent[student.id]?.[date] || '-';
             row.push(status);
         });
         csvRows.push(row.join(","));
     });
 
     const csvString = csvRows.join("\n");
-    const blob = new Blob([csvString], { type: 'text/csv' });
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.setAttribute('hidden', '');
@@ -190,22 +195,23 @@ export default function RecordsPage() {
                 <Table className="min-w-full">
                 <TableHeader>
                     <TableRow>
-                    <TableHead className="sticky left-0 bg-background z-10">Date</TableHead>
-                    {reportData.students.map(student => (
-                        <TableHead key={student.id} className="text-center">
-                            <div>{student.firstName} {student.lastName}</div>
-                            <div className="font-normal text-xs text-muted-foreground">({student.studentId})</div>
-                        </TableHead>
-                    ))}
+                        <TableHead className="sticky left-0 bg-background z-10 w-[50px]">SR#</TableHead>
+                        <TableHead className="sticky left-[50px] bg-background z-10 min-w-[200px]">Student</TableHead>
+                        <TableHead className="sticky left-[250px] bg-background z-10 min-w-[120px]">Roll No.</TableHead>
+                        {reportData.dates.map(date => (
+                            <TableHead key={date} className="text-center min-w-[120px]">{format(new Date(date), 'dd MMM, yy')}</TableHead>
+                        ))}
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {reportData.dates.map(date => (
-                    <TableRow key={date}>
-                        <TableCell className="sticky left-0 bg-background z-10 font-medium">{format(new Date(date), 'dd MMM, yyyy')}</TableCell>
-                        {reportData.students.map(student => (
-                            <TableCell key={student.id} className="text-center">
-                                {reportData.recordsByDate[date]?.[student.id] || '-'}
+                    {reportData.students.map((student, index) => (
+                    <TableRow key={student.id}>
+                        <TableCell className="sticky left-0 bg-background z-10 font-medium">{index + 1}</TableCell>
+                        <TableCell className="sticky left-[50px] bg-background z-10 font-medium">{student.firstName} {student.lastName}</TableCell>
+                        <TableCell className="sticky left-[250px] bg-background z-10">{student.studentId}</TableCell>
+                        {reportData.dates.map(date => (
+                            <TableCell key={date} className="text-center">
+                                {reportData.recordsByStudent[student.id]?.[date] || '-'}
                             </TableCell>
                         ))}
                     </TableRow>
