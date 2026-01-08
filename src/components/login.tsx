@@ -10,14 +10,14 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth, addDocumentNonBlocking } from '@/firebase';
+import { useAuth } from '@/firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { GraduationCap } from 'lucide-react';
-import { collection, doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 
 export function Login() {
@@ -59,7 +59,7 @@ export function Login() {
         toast({
           variant: 'destructive',
           title: 'Authentication Error',
-          description: error.message,
+          description: "Invalid email or password.",
         });
       }
     }
