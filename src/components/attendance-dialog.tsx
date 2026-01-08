@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +41,20 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
   });
   const [attendanceDate, setAttendanceDate] = useState<Date | undefined>(new Date());
 
+  useEffect(() => {
+    if (open) {
+      setStep('date');
+      setAttendanceDate(new Date());
+    }
+  }, [open]);
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+        setAttendanceDate(date);
+        setStep('students');
+    }
+  }
+
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
     setAttendance(prev => ({ ...prev, [studentId]: status }));
   };
@@ -51,18 +65,6 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
         newState[student.id] = status;
     });
     setAttendance(newState);
-  };
-  
-  const handleNext = () => {
-    if (!attendanceDate) {
-        toast({
-            variant: "destructive",
-            title: "No Date Selected",
-            description: "Please select a date for the attendance.",
-        });
-        return;
-    }
-    setStep('students');
   };
 
   const handleSave = async () => {
@@ -76,7 +78,6 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
     }
     
     if (!attendanceDate) {
-        // This should not happen due to the new flow, but as a safeguard
         toast({
             variant: "destructive",
             title: "No Date Selected",
@@ -108,7 +109,7 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
           description: `Attendance for ${classInfo.courseName} on ${format(attendanceDate, 'PPP')} has been recorded.`,
           className: 'bg-accent text-accent-foreground',
         });
-        handleClose();
+        onOpenChange(false);
     } catch (error) {
         console.error("Error saving attendance: ", error);
         toast({
@@ -119,17 +120,8 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
     }
   };
 
-  const handleClose = () => {
-    onOpenChange(false);
-    // Reset state on close after a short delay to allow animation
-    setTimeout(() => {
-        setStep('date');
-        setAttendanceDate(new Date());
-    }, 300);
-  }
-
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
         className={step === 'date' ? 'sm:max-w-auto' : 'max-w-4xl w-full'}
         >
@@ -144,14 +136,14 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
         </DialogHeader>
         
         {step === 'date' && (
-            <div className='flex flex-col items-center gap-4 py-4'>
+            <div className='flex justify-center py-4'>
                  <Calendar
                     mode="single"
                     selected={attendanceDate}
-                    onSelect={setAttendanceDate}
+                    onSelect={handleDateSelect}
                     disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                    className="rounded-md border"
                     initialFocus
+                    className="rounded-md border"
                 />
             </div>
         )}
@@ -201,10 +193,7 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
 
         <DialogFooter className='mt-4'>
           {step === 'date' ? (
-              <>
-                <Button variant="outline" onClick={handleClose}>Cancel</Button>
-                <Button onClick={handleNext}>Next</Button>
-              </>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           ) : (
              <>
                 <Button variant="outline" onClick={() => setStep('date')}>Back</Button>
