@@ -40,11 +40,11 @@ service cloud.firestore {
     // Rules for the global students list
     match /students/{studentId} {
         allow write: if isAdmin();
-        allow read: if isAdmin() || (request.auth.token.firebase.sign_in_provider == "anonymous" && resource.data.uid == request.auth.uid);
+        allow read: if isAdmin() || (request.auth.token.firebase.sign_in_provider == "anonymous");
         
         // Allow an anonymously authenticated user to query for their own student document
         // This is secure because they can only query by a specific `uid`, they cannot list all students.
-        allow list: if request.auth.token.firebase.sign_in_provider == "anonymous" && request.query.where[0][0] == "uid";
+        allow list: if isAdmin() || (request.auth.token.firebase.sign_in_provider == "anonymous" && request.query.where[0][0] == "uid");
     }
     match /attendance_records/{recordId} {
       allow read, list: if request.auth != null;
