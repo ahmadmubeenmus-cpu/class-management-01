@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, BookUser, FileText, Users, School, User, Database } from "lucide-react";
+import { LayoutDashboard, BookUser, Users, School, User, Database } from "lucide-react";
 import { Badge } from "./ui/badge";
 
 const navItems = [
@@ -12,7 +12,6 @@ const navItems = [
     { href: "/students", label: "Students", icon: Users },
     { href: "/attendance", label: "Attendance", icon: BookUser },
     { href: "/records", label: "Records", icon: Database },
-    { href: "/reports", label: "Reports", icon: FileText },
     { href: "/admin", label: "Admin", icon: User },
 ]
 
