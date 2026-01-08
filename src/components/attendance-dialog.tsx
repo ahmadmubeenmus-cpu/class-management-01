@@ -156,9 +156,8 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
                 <Table>
                     <TableHeader>
                         <TableRow>
-                        <TableHead>Student</TableHead>
-                        <TableHead className='text-center'>Present</TableHead>
-                        <TableHead className='text-center'>Absent</TableHead>
+                            <TableHead>Student</TableHead>
+                            <TableHead className='text-right'>Status</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -168,19 +167,23 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
                             <div className="font-medium">{student.firstName} {student.lastName}</div>
                             <div className="text-sm text-muted-foreground">{student.rollNo}</div>
                             </TableCell>
-                            <RadioGroup 
-                                defaultValue="present" 
-                                className="contents"
-                                onValueChange={(value) => handleStatusChange(student.id, value as AttendanceStatus)}
-                                value={attendance[student.id]}
-                            >
-                                <TableCell className="text-center">
-                                    <RadioGroupItem value="present" id={`${student.id}-present`} />
-                                </TableCell>
-                                <TableCell className="text-center">
-                                    <RadioGroupItem value="absent" id={`${student.id}-absent`} />
-                                </TableCell>
-                            </RadioGroup>
+                           <TableCell className="text-right">
+                                <RadioGroup 
+                                    defaultValue="present" 
+                                    className="flex justify-end gap-4"
+                                    onValueChange={(value) => handleStatusChange(student.id, value as AttendanceStatus)}
+                                    value={attendance[student.id]}
+                                >
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="present" id={`${student.id}-present`} />
+                                        <Label htmlFor={`${student.id}-present`}>Present</Label>
+                                    </div>
+                                     <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="absent" id={`${student.id}-absent`} />
+                                        <Label htmlFor={`${student.id}-absent`}>Absent</Label>
+                                    </div>
+                                </RadioGroup>
+                           </TableCell>
                         </TableRow>
                         ))}
                     </TableBody>
