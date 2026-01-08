@@ -31,15 +31,19 @@ export function Login() {
     if (!auth || !firestore) return;
 
     try {
+      // First, just try to sign in.
       await signInWithEmailAndPassword(auth, email, password);
       toast({ title: 'Signed in successfully' });
     } catch (signInError: any) {
-      // This specific error code can mean "user not found" or "wrong password".
-      // We'll proceed to create the user only if it's the designated admin email.
+      // If sign-in fails, check the error code.
+      // 'auth/invalid-credential' can mean user not found OR wrong password.
       if (
         signInError.code === 'auth/invalid-credential' &&
         email === 'admin@example.com'
       ) {
+        // Since we can't be sure if the user doesn't exist or if the password is just wrong,
+        // we'll attempt to create the user. If the user already exists, this will fail,
+        // which is fine, as it means the password was wrong.
         try {
           const userCredential = await createUserWithEmailAndPassword(
             auth,
@@ -48,7 +52,7 @@ export function Login() {
           );
           const user = userCredential.user;
 
-          // Create the admin document in Firestore to grant permissions
+          // CRITICAL: Create the admin document in Firestore to grant permissions.
           const adminRef = doc(firestore, 'admins', user.uid);
           await setDoc(adminRef, {
             id: user.uid,
@@ -58,14 +62,18 @@ export function Login() {
             role: 'super_admin',
           });
 
-          toast({ title: 'Admin account created. Signed in successfully.' });
+          toast({
+            title: 'Admin account created',
+            description: 'Signed in successfully.',
+          });
         } catch (signUpError: any) {
-          // This can happen if the user exists but the initial password was wrong.
-          // In that case, the original sign-in error is more accurate.
+          // If creating the user fails, it's most likely because the user already exists,
+          // which means the original password was incorrect.
           toast({
             variant: 'destructive',
             title: 'Authentication Error',
-            description: 'Invalid email or password.',
+            description:
+              'Invalid password. If this is your first time, the admin account may already exist.',
           });
         }
       } else {
@@ -73,7 +81,7 @@ export function Login() {
         toast({
           variant: 'destructive',
           title: 'Authentication Error',
-          description: 'Invalid email or password.',
+          description: signInError.message || 'An unknown error occurred.',
         });
       }
     }
