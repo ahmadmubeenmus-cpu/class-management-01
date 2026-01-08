@@ -6,15 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Download } from 'lucide-react';
 import type { Student, Course, AttendanceRecord } from '@/lib/types';
-import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 
-interface EnrichedAttendanceRecord extends AttendanceRecord {
-  student?: Student;
+interface TransformedData {
+  students: Student[];
+  dates: string[];
+  recordsByDate: Record<string, Record<string, string>>;
 }
 
 export default function RecordsPage() {
@@ -24,7 +25,7 @@ export default function RecordsPage() {
   const { data: courses, isLoading: coursesLoading } = useCollection<Course>(coursesQuery);
 
   const [selectedClassId, setSelectedClassId] = useState<string | undefined>(undefined);
-  const [attendanceData, setAttendanceData] = useState<EnrichedAttendanceRecord[]>([]);
+  const [reportData, setReportData] = useState<TransformedData | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const fetchStudents = async (studentIds: string[]): Promise<Map<string, Student>> => {
@@ -47,7 +48,7 @@ export default function RecordsPage() {
     if (!firestore || !selectedClassId) return;
 
     setIsGenerating(true);
-    setAttendanceData([]);
+    setReportData(null);
 
     const attendanceRef = collection(firestore, `courses/${selectedClassId}/attendance_records`);
     const attendanceQuery = query(attendanceRef);
@@ -59,39 +60,49 @@ export default function RecordsPage() {
         const studentIds = [...new Set(attendanceRecords.map(rec => rec.studentId))];
         const studentMap = await fetchStudents(studentIds);
         
-        const enrichedData: EnrichedAttendanceRecord[] = attendanceRecords.map(record => ({
-            ...record,
-            student: studentMap.get(record.studentId),
-        }));
+        const students = Array.from(studentMap.values()).sort((a,b) => (a.studentId || "").localeCompare(b.studentId || ""));
+        const studentIdList = students.map(s => s.id);
+        
+        const dateSet = new Set<string>();
+        const recordsByDate: Record<string, Record<string, string>> = {};
 
-        enrichedData.sort((a,b) => {
-            const dateA = a.date.toMillis();
-            const dateB = b.date.toMillis();
-            if (dateA !== dateB) return dateB - dateA;
-            return (a.student?.studentId || "").localeCompare(b.student?.studentId || "");
+        attendanceRecords.forEach(record => {
+            const dateStr = format(record.date.toDate(), 'yyyy-MM-dd');
+            dateSet.add(dateStr);
+            if (!recordsByDate[dateStr]) {
+                recordsByDate[dateStr] = {};
+            }
+            recordsByDate[dateStr][record.studentId] = record.status === 'present' ? 'P' : 'A';
         });
 
-        setAttendanceData(enrichedData);
+        const sortedDates = Array.from(dateSet).sort((a,b) => new Date(b).getTime() - new Date(a).getTime());
+
+        setReportData({
+            students: students,
+            dates: sortedDates,
+            recordsByDate: recordsByDate,
+        });
+
     } else {
-        setAttendanceData([]);
+        setReportData(null);
     }
 
     setIsGenerating(false);
   };
 
   const handleDownload = () => {
-    const headers = ["SR#", "Student Name", "Roll No.", "Date", "Status"];
+    if (!reportData) return;
+
+    const { students, dates, recordsByDate } = reportData;
+    const headers = ["Date", ...students.map(s => `${s.firstName} ${s.lastName} (${s.studentId})`)];
     const csvRows = [headers.join(",")];
     
-    attendanceData.forEach((record, index) => {
-        if (!record.student) return;
-        const row = [
-            index + 1,
-            `${record.student.firstName} ${record.student.lastName}`,
-            record.student.studentId,
-            format(record.date.toDate(), 'yyyy-MM-dd'),
-            record.status,
-        ];
+    dates.forEach(date => {
+        const row = [format(new Date(date), 'PPP')];
+        students.forEach(student => {
+            const status = recordsByDate[date]?.[student.id] || '-';
+            row.push(status);
+        });
         csvRows.push(row.join(","));
     });
 
@@ -101,7 +112,7 @@ export default function RecordsPage() {
     const a = document.createElement('a');
     a.setAttribute('hidden', '');
     a.setAttribute('href', url);
-    a.setAttribute('download', `attendance_records_${selectedClassId}_${new Date().toISOString().split('T')[0]}.csv`);
+    a.setAttribute('download', `attendance_register_${selectedClassId}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -111,15 +122,15 @@ export default function RecordsPage() {
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
       <div className="flex items-center justify-between">
         <div>
-            <h1 className="text-2xl font-bold tracking-tight">Attendance Records</h1>
-            <p className="text-muted-foreground">View and download detailed attendance records.</p>
+            <h1 className="text-2xl font-bold tracking-tight">Attendance Register</h1>
+            <p className="text-muted-foreground">View and download attendance in a register format.</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Filter by Class</CardTitle>
-          <CardDescription>Select a class to view its attendance records.</CardDescription>
+          <CardDescription>Select a class to view its attendance register.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-4">
           <div className="grid gap-2">
@@ -158,11 +169,11 @@ export default function RecordsPage() {
         </Card>
       )}
 
-      {attendanceData.length > 0 && !isGenerating && (
+      {reportData && !isGenerating && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Attendance Log</CardTitle>
+                <CardTitle>Attendance Register</CardTitle>
                 <CardDescription>
                     Records for {courses?.find(c => c.id === selectedClassId)?.courseName}.
                 </CardDescription>
@@ -175,41 +186,37 @@ export default function RecordsPage() {
               </Button>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">SR#</TableHead>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Roll No.</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {attendanceData.map((record, index) => (
-                  record.student ? (
-                  <TableRow key={record.id}>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell>
-                      <div className="font-medium">{record.student.firstName} {record.student.lastName}</div>
-                      <div className="text-sm text-muted-foreground">{record.student.email}</div>
-                    </TableCell>
-                    <TableCell>{record.student.studentId}</TableCell>
-                    <TableCell>{format(record.date.toDate(), 'PPP')}</TableCell>
-                    <TableCell className="text-center">
-                        <Badge variant={record.status === 'present' ? 'default' : 'destructive'} className={record.status === 'present' ? 'bg-accent text-accent-foreground hover:bg-accent/80' : ''}>
-                            {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
-                        </Badge>
-                    </TableCell>
-                  </TableRow>
-                  ) : null
-                ))}
-              </TableBody>
-            </Table>
+            <div className="overflow-x-auto">
+                <Table className="min-w-full">
+                <TableHeader>
+                    <TableRow>
+                    <TableHead className="sticky left-0 bg-background z-10">Date</TableHead>
+                    {reportData.students.map(student => (
+                        <TableHead key={student.id} className="text-center">
+                            <div>{student.firstName} {student.lastName}</div>
+                            <div className="font-normal text-xs text-muted-foreground">({student.studentId})</div>
+                        </TableHead>
+                    ))}
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {reportData.dates.map(date => (
+                    <TableRow key={date}>
+                        <TableCell className="sticky left-0 bg-background z-10 font-medium">{format(new Date(date), 'dd MMM, yyyy')}</TableCell>
+                        {reportData.students.map(student => (
+                            <TableCell key={student.id} className="text-center">
+                                {reportData.recordsByDate[date]?.[student.id] || '-'}
+                            </TableCell>
+                        ))}
+                    </TableRow>
+                    ))}
+                </TableBody>
+                </Table>
+            </div>
           </CardContent>
         </Card>
       )}
-      {!attendanceData.length && !isGenerating && selectedClassId && (
+      {!reportData && !isGenerating && selectedClassId && (
         <Card>
             <CardContent className="pt-6">
                 <p className="text-center text-muted-foreground">No records found for the selected class.</p>
