@@ -1,7 +1,8 @@
 'use client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Upload, UserPlus, Edit } from 'lucide-react';
+import { PlusCircle, Upload, UserPlus } from 'lucide-react';
+import { EditProfileDialog } from './edit-profile-dialog';
 
 export function AdminTab() {
   return (
@@ -11,10 +12,7 @@ export function AdminTab() {
                 <h2 className="text-2xl font-bold tracking-tight">Admin Controls</h2>
                 <p className="text-muted-foreground">Manage users, courses, and application data.</p>
             </div>
-             <Button>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit Profile
-            </Button>
+            <EditProfileDialog />
         </div>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

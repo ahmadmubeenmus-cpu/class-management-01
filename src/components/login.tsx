@@ -10,13 +10,19 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useAuth, addDocumentNonBlocking } from '@/firebase';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+} from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { GraduationCap } from 'lucide-react';
+import { collection, doc, setDoc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 
 export function Login() {
   const auth = useAuth();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const [email, setEmail] = useState('admin@example.com');
   const [password, setPassword] = useState('password');
@@ -27,11 +33,35 @@ export function Login() {
       await signInWithEmailAndPassword(auth, email, password);
       toast({ title: 'Signed in successfully' });
     } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Authentication Error',
-        description: error.message,
-      });
+      if (error.code === 'auth/user-not-found' && email === 'admin@example.com') {
+        // If the admin user doesn't exist, create it.
+        try {
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          const user = userCredential.user;
+          // Also create an admin document in Firestore
+          const adminRef = doc(firestore, 'admins', user.uid);
+          await setDoc(adminRef, {
+            id: user.uid,
+            email: user.email,
+            firstName: 'Admin',
+            lastName: 'User',
+            role: 'super_admin'
+          });
+          toast({ title: 'Admin account created. Signed in successfully.' });
+        } catch (creationError: any) {
+          toast({
+            variant: 'destructive',
+            title: 'Admin Creation Failed',
+            description: creationError.message,
+          });
+        }
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Authentication Error',
+          description: error.message,
+        });
+      }
     }
   };
 

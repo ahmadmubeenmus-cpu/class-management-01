@@ -29,6 +29,7 @@ export function AddClassDialog() {
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!firestore) return;
     if (!courseName || !courseCode) {
         toast({
             variant: "destructive",
@@ -43,6 +44,11 @@ export function AddClassDialog() {
         courseName,
         courseCode,
         description,
+    }).then(docRef => {
+        // After adding the doc, update it with its own ID
+        if (docRef) {
+            updateDocumentNonBlocking(docRef, { id: docRef.id });
+        }
     });
     
     toast({
