@@ -19,6 +19,10 @@ import { useToast } from '@/hooks/use-toast';
 import { GraduationCap } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
+import {
+  initiateEmailSignIn,
+  initiateEmailSignUp,
+} from '@/firebase/non-blocking-login';
 
 export function Login() {
   const auth = useAuth();
@@ -29,8 +33,10 @@ export function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!auth || !firestore) return;
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       toast({ title: 'Signed in successfully' });
     } catch (error: any) {
       if (error.code === 'auth/user-not-found' && email === 'admin@example.com') {
@@ -55,11 +61,17 @@ export function Login() {
             description: creationError.message,
           });
         }
+      } else if (error.code === 'auth/invalid-credential') {
+         toast({
+          variant: 'destructive',
+          title: 'Authentication Error',
+          description: "Invalid email or password.",
+        });
       } else {
         toast({
           variant: 'destructive',
           title: 'Authentication Error',
-          description: "Invalid email or password.",
+          description: error.message,
         });
       }
     }
