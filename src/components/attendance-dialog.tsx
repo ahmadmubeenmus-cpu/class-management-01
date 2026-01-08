@@ -109,7 +109,10 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl w-full">
+      <DialogContent 
+        className="max-w-2xl w-full"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        >
         <DialogHeader>
           <DialogTitle>Mark Attendance: {classInfo.courseName}</DialogTitle>
           <DialogDescription>
