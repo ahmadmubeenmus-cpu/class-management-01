@@ -56,13 +56,39 @@
         "lastName": {
           "type": "string",
           "description": "Last name of the user."
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "user"
+          ]
+        },
+        "permissions": {
+          "type": "object",
+          "properties": {
+            "canMarkAttendance": {
+              "type": "boolean"
+            },
+            "canViewRecords": {
+              "type": "boolean"
+            },
+            "canViewDashboard": {
+              "type": "boolean"
+            }
+          }
         }
       },
       "required": [
         "id",
         "username",
         "firstName",
-        "lastName"
+        "lastName",
+        "email",
+        "role"
       ]
     },
     "Student": {
@@ -121,7 +147,6 @@
         },
         "description": {
           "type": "string",
-
           "description": "Description of the course."
         }
       },
@@ -315,3 +340,4 @@
     "reasoning": "The Firestore structure is designed to support the AttendanceEase application's requirements, focusing on admin-managed courses, student enrollment, attendance tracking, and user roles. Authorization Independence is achieved by storing roles in dedicated collections and denormalizing course membership to simplify security rules and enable secure list operations (QAPs).  Storing roles in the database allows for flexible role management without custom claims. The structure leverages path-based ownership and membership maps for collaborative data access.\n\nSpecifically:\n\n*   `/admins/{adminId}`: Stores admin user data. Authentication is handled by Firebase Auth, and authorization is determined by the existence of a document in this collection.\n*   `/users/{userId}`: Stores general user data (those who can mark attendance). Similar to admins, authorization relies on document existence.\n*   `/students/{studentId}`: Stores student data. Admins manage this data.\n*   `/courses/{courseId}`: Stores course information. Admins manage courses.\n*   `/courses/{courseId}/students/{studentId}`: Represents the many-to-many relationship between courses and students. This subcollection includes denormalized data (student IDs) from the parent `course` document, ensuring Authorization Independence for attendance records.\n*   `/courses/{courseId}/attendance_records/{attendanceRecordId}`: Stores attendance records for each course. This subcollection directly inherits the `courseId` from its parent, facilitating secure `list` operations and simplifying rules.\n\nThis structure supports the core features of the application, including class management, bulk student upload, attendance marking, report generation, and attendance percentage calculation, while adhering to the principles of Authorization Independence and DBAC."
   }
 }
+    

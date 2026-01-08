@@ -8,6 +8,11 @@ export interface UserProfile {
   role?: 'admin' | 'user';
   profilePictureUrl?: string;
   username?: string;
+  permissions?: {
+    canMarkAttendance?: boolean;
+    canViewRecords?: boolean;
+    canViewDashboard?: boolean;
+  };
 }
 
 export interface Student {
@@ -35,3 +40,5 @@ export interface AttendanceRecord {
   status: AttendanceStatus;
   markedBy: string;
 }
+
+    

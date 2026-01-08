@@ -4,8 +4,12 @@ import { Button } from '@/components/ui/button';
 import { UserPlus, PlusCircle, Upload } from 'lucide-react';
 import { BulkUploadDialog } from '@/components/bulk-upload-dialog';
 import { AddClassDialog } from '@/components/add-class-dialog';
+import { ManageUsersDialog } from '@/components/manage-users-dialog';
+import { useState } from 'react';
 
 export default function AdminPage() {
+  const [isManageUsersOpen, setIsManageUsersOpen] = useState(false);
+
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
       <div className="flex items-center justify-between">
@@ -22,7 +26,7 @@ export default function AdminPage() {
             <CardDescription>Add, remove, or edit users and their roles.</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-end">
-             <Button disabled>
+             <Button onClick={() => setIsManageUsersOpen(true)}>
                 <UserPlus className="mr-2 h-4 w-4" />
                 Manage Users
             </Button>
@@ -57,6 +61,9 @@ export default function AdminPage() {
           </CardContent>
         </Card>
       </div>
+      <ManageUsersDialog open={isManageUsersOpen} onOpenChange={setIsManageUsersOpen} />
     </main>
   );
 }
+
+    
