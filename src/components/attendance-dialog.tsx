@@ -88,7 +88,7 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
 
     try {
         const batch = writeBatch(firestore);
-        const attendanceCollectionRef = collection(firestore, 'attendance_records');
+        const attendanceCollectionRef = collection(firestore, `courses/${classInfo.id}/attendance_records`);
         const studentMap = new Map(classInfo.students.map(s => [s.id, s]));
 
         Object.entries(attendance).forEach(([studentId, status]) => {
