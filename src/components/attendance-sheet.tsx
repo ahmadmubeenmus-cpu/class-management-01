@@ -94,7 +94,7 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-2xl w-full">
+      <SheetContent className="sm:max-w-xl w-full">
         <SheetHeader>
           <SheetTitle>Mark Attendance: {classInfo.courseName}</SheetTitle>
           <SheetDescription>
@@ -113,8 +113,6 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
               <TableHead>Student Name</TableHead>
               <TableHead className='text-center'>Present</TableHead>
               <TableHead className='text-center'>Absent</TableHead>
-              <TableHead className='text-center'>Late</TableHead>
-              <TableHead className='text-center'>Excused</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -130,7 +128,7 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
                     onValueChange={(value) => handleStatusChange(student.id, value as AttendanceStatus)}
                     value={attendance[student.id]}
                 >
-                    {(['present', 'absent', 'late', 'excused'] as AttendanceStatus[]).map(status => (
+                    {(['present', 'absent'] as AttendanceStatus[]).map(status => (
                         <TableCell key={status} className="text-center">
                             <RadioGroupItem value={status} id={`${student.id}-${status}`} />
                         </TableCell>

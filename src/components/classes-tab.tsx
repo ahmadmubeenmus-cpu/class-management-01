@@ -42,6 +42,14 @@ export function ClassesTab() {
     const studentsSnapshot = await getDocs(studentsCollection);
     const studentsList = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
     
+    // Sort students by studentId (roll number)
+    studentsList.sort((a, b) => {
+      // Basic numeric sort, can be improved for alphanumeric roll numbers
+      const idA = parseInt(a.studentId.replace(/[^0-9]/g, ''), 10) || 0;
+      const idB = parseInt(b.studentId.replace(/[^0-9]/g, ''), 10) || 0;
+      return idA - idB;
+    });
+
     const classWithStudents: CourseWithStudents = { ...classItem, students: studentsList };
     setSelectedClass(classWithStudents);
     setIsSheetOpen(true);

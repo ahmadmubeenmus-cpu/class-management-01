@@ -23,7 +23,7 @@ export interface Course {
   description: string;
 }
 
-export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
+export type AttendanceStatus = 'present' | 'absent';
 
 export interface AttendanceRecord {
   id: string;
