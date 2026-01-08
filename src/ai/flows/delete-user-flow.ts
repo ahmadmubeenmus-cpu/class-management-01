@@ -72,13 +72,16 @@ const deleteUserFlow = ai.defineFlow(
       // Provide more specific error messages
       let errorMessage = 'An unexpected error occurred while deleting the user.';
       if (error.code === 'auth/user-not-found') {
-        // If user not in Auth, still try to delete from Firestore
+        // If user not in Auth, still try to delete from Firestore as a cleanup
         try {
             const userDocRef = firestore.collection('users').doc(userId);
-            await userDocRef.delete();
+            const userDoc = await userDocRef.get();
+            if(userDoc.exists) {
+                await userDocRef.delete();
+            }
             return {
                 success: true,
-                message: `User not found in Authentication, but deleted from Firestore.`,
+                message: `User not found in Authentication, but was cleaned up from Firestore.`,
             };
         } catch (dbError) {
              errorMessage = "User not found in Auth, and failed to delete from Firestore.";
