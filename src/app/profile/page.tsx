@@ -12,7 +12,7 @@ import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function ProfilePage() {
-    const { user, userProfile } = useUser();
+    const { user, userProfile, isAdmin } = useUser();
     const auth = useAuth();
     const firestore = useFirestore();
     const { toast } = useToast();
@@ -39,7 +39,10 @@ export default function ProfilePage() {
 
     const handleProfileUpdate = async () => {
         if (!firestore || !user) return;
-        const userRef = doc(firestore, 'admins', user.uid);
+        
+        const collectionName = isAdmin ? 'admins' : 'users';
+        const userRef = doc(firestore, collectionName, user.uid);
+        
         try {
             await updateDocumentNonBlocking(userRef, {
                 firstName,
