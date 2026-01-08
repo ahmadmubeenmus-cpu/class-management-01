@@ -1,18 +1,15 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePickerWithRange } from '@/components/date-picker-with-range';
 import { Download } from 'lucide-react';
 import type { Student, Course, AttendanceRecord } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
-import { DateRange } from 'react-day-picker';
-import { startOfDay, endOfDay, format } from 'date-fns';
-import { useToast } from '@/hooks/use-toast';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 
@@ -22,13 +19,11 @@ interface EnrichedAttendanceRecord extends AttendanceRecord {
 
 export default function RecordsPage() {
   const firestore = useFirestore();
-  const { toast } = useToast();
   
   const coursesQuery = useMemoFirebase(() => collection(firestore, 'courses'), [firestore]);
   const { data: courses, isLoading: coursesLoading } = useCollection<Course>(coursesQuery);
 
   const [selectedClassId, setSelectedClassId] = useState<string | undefined>(undefined);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [attendanceData, setAttendanceData] = useState<EnrichedAttendanceRecord[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -39,9 +34,11 @@ export default function RecordsPage() {
     // Fetch students in chunks of 30
     for (let i = 0; i < studentIds.length; i += 30) {
         const chunk = studentIds.slice(i, i + 30);
-        const studentQuery = query(collection(firestore, 'students'), where('id', 'in', chunk));
-        const snapshot = await getDocs(studentQuery);
-        snapshot.forEach(doc => studentMap.set(doc.id, { id: doc.id, ...doc.data() } as Student));
+        if (chunk.length > 0) {
+            const studentQuery = query(collection(firestore, 'students'), where('id', 'in', chunk));
+            const snapshot = await getDocs(studentQuery);
+            snapshot.forEach(doc => studentMap.set(doc.id, { id: doc.id, ...doc.data() } as Student));
+        }
     }
     return studentMap;
   };
@@ -53,19 +50,7 @@ export default function RecordsPage() {
     setAttendanceData([]);
 
     const attendanceRef = collection(firestore, `courses/${selectedClassId}/attendance_records`);
-    let attendanceQuery = query(attendanceRef);
-
-    if (dateRange?.from && dateRange?.to) {
-        attendanceQuery = query(attendanceQuery, 
-            where('date', '>=', startOfDay(dateRange.from)),
-            where('date', '<=', endOfDay(dateRange.to))
-        );
-    } else if (dateRange?.from) {
-        attendanceQuery = query(attendanceQuery, 
-            where('date', '>=', startOfDay(dateRange.from)),
-            where('date', '<=', endOfDay(dateRange.from))
-        );
-    }
+    const attendanceQuery = query(attendanceRef);
 
     const attendanceSnap = await getDocs(attendanceQuery);
     const attendanceRecords = attendanceSnap.docs.map(doc => doc.data() as AttendanceRecord);
@@ -90,7 +75,6 @@ export default function RecordsPage() {
     } else {
         setAttendanceData([]);
     }
-
 
     setIsGenerating(false);
   };
@@ -119,7 +103,7 @@ export default function RecordsPage() {
     a.setAttribute('href', url);
     a.setAttribute('download', `attendance_records_${selectedClassId}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(a);
-a.click();
+    a.click();
     document.body.removeChild(a);
   };
 
@@ -134,14 +118,10 @@ a.click();
 
       <Card>
         <CardHeader>
-          <CardTitle>Filters</CardTitle>
-          <CardDescription>Select filters to view records.</CardDescription>
+          <CardTitle>Filter by Class</CardTitle>
+          <CardDescription>Select a class to view its attendance records.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-4">
-          <div className="grid gap-2">
-            <Label>Date range</Label>
-            <DatePickerWithRange onDateChange={setDateRange} />
-          </div>
           <div className="grid gap-2">
             <Label>Class</Label>
             {coursesLoading ? <Skeleton className="h-10 w-full sm:w-[200px]" /> : (
@@ -232,7 +212,7 @@ a.click();
       {!attendanceData.length && !isGenerating && selectedClassId && (
         <Card>
             <CardContent className="pt-6">
-                <p className="text-center text-muted-foreground">No records found for the selected criteria.</p>
+                <p className="text-center text-muted-foreground">No records found for the selected class.</p>
             </CardContent>
         </Card>
       )}
