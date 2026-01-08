@@ -17,18 +17,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useState } from 'react';
 
-interface HeaderProps {
-    isMobileMenuOpen: boolean;
-    setMobileMenuOpen: (open: boolean) => void;
-    isSidebarCollapsed: boolean;
-    toggleSidebar: () => void;
-}
-
-export function Header({ isMobileMenuOpen, setMobileMenuOpen, isSidebarCollapsed, toggleSidebar }: HeaderProps) {
+export function Header() {
   const { userProfile } = useUser();
   const auth = useAuth();
   const router = useRouter();
+  const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
+
 
   const handleLogout = async () => {
     if (auth) {
@@ -46,11 +42,15 @@ export function Header({ isMobileMenuOpen, setMobileMenuOpen, isSidebarCollapsed
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
       <nav className="hidden w-full flex-row items-center justify-between md:flex">
-         <div className='flex items-center gap-4'>
-            <Button variant="outline" size="icon" onClick={toggleSidebar} className="h-8 w-8">
-                <Menu className="h-4 w-4" />
-                <span className="sr-only">Toggle Sidebar</span>
-            </Button>
+         <div className='flex items-center gap-6'>
+            <Link
+                href="/dashboard"
+                className="flex items-center gap-2 text-lg font-semibold"
+            >
+                <GraduationCap className="h-6 w-6 text-primary" />
+                <span className="font-bold">Class Managment</span>
+            </Link>
+            <SidebarNav isCollapsed={false} />
          </div>
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
