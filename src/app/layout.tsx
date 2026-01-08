@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
 import { SidebarLayout } from '@/components/sidebar-layout';
+import { UserProvider } from '@/firebase/auth/use-user';
 
 export const metadata: Metadata = {
   title: 'AttendanceEase',
@@ -23,11 +24,13 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <FirebaseClientProvider>
-          <div className="flex min-h-screen w-full flex-col bg-muted/40">
-            <SidebarLayout>
-              {children}
-            </SidebarLayout>
-          </div>
+            <UserProvider>
+              <div className="flex min-h-screen w-full flex-col bg-muted/40">
+                <SidebarLayout>
+                  {children}
+                </SidebarLayout>
+              </div>
+            </UserProvider>
         </FirebaseClientProvider>
         <Toaster />
       </body>

@@ -1,8 +1,8 @@
 'use client';
-
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase/auth/use-user';
+import Loading from './loading';
 
 export default function Home() {
   const router = useRouter();
@@ -18,5 +18,6 @@ export default function Home() {
     }
   }, [router, user, isLoading]);
 
-  return null; 
+  // Render a loading state while the redirect is happening
+  return <Loading />; 
 }

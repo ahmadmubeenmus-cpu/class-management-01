@@ -5,6 +5,7 @@ import { firebaseConfig } from '@/firebase/config';
 import type { FirebaseApp } from 'firebase/app';
 import type { Firestore } from 'firebase/firestore';
 import type { Auth } from 'firebase/auth';
+import Loading from '@/app/loading';
 
 export function FirebaseClientProvider({ children }: { children: React.ReactNode }) {
   const [firebaseInstance, setFirebaseInstance] = useState<{
@@ -19,8 +20,8 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
   }, []);
 
   if (!firebaseInstance) {
-    // You can render a loading indicator here
-    return <div className="flex h-screen w-full items-center justify-center">Loading Firebase...</div>;
+    // Use the main loading component for a better initial experience
+    return <Loading />;
   }
 
   return (

@@ -26,7 +26,12 @@ export function SidebarLayout({
   }, []);
 
   useEffect(() => {
-    if (!isLoading && !user && pathname !== '/login') {
+    // Don't run this logic on the login page or if it's still loading
+    if (isLoading || pathname === '/login') {
+        return;
+    }
+    // If not loading and no user, redirect to login
+    if (!user) {
       router.push('/login');
     }
   }, [user, isLoading, router, pathname]);
@@ -39,15 +44,18 @@ export function SidebarLayout({
     });
   };
 
+  // If it's a protected route and we're still checking auth, show loading
   if (isLoading && pathname !== '/login') {
     return <Loading />;
   }
-
+  
+  // If it's a protected route and the user is not logged in,
+  // we show a loading screen while the redirect happens.
   if (!user && pathname !== '/login') {
-    // Still loading or redirecting
     return <Loading />;
   }
   
+  // Render login page without the sidebar layout
   if (pathname === '/login') {
     return <>{children}</>;
   }
