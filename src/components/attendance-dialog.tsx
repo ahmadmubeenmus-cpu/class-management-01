@@ -15,8 +15,9 @@ import type { Student, AttendanceStatus, Course } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
 import { collection, writeBatch, doc, Timestamp } from 'firebase/firestore';
-import { Calendar } from './ui/calendar';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 
 
 interface AttendanceDialogProps {
@@ -26,12 +27,10 @@ interface AttendanceDialogProps {
 }
 
 type StudentAttendanceState = Record<string, AttendanceStatus>;
-type Step = 'date' | 'students';
 
 export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const [step, setStep] = useState<Step>('date');
   const [attendance, setAttendance] = useState<StudentAttendanceState>(() => {
     const initialState: StudentAttendanceState = {};
     classInfo.students.forEach(student => {
@@ -39,19 +38,19 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
     });
     return initialState;
   });
-  const [attendanceDate, setAttendanceDate] = useState<Date | undefined>(new Date());
+  const [attendanceDate, setAttendanceDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
 
   useEffect(() => {
     if (open) {
-      setStep('date');
-      setAttendanceDate(new Date());
+      // Reset state when dialog opens
+      setAttendanceDate(format(new Date(), 'yyyy-MM-dd'));
+      const initialState: StudentAttendanceState = {};
+      classInfo.students.forEach(student => {
+        initialState[student.id] = 'present';
+      });
+      setAttendance(initialState);
     }
-  }, [open]);
-
-  const handleDateSelect = (date: Date) => {
-    setAttendanceDate(date);
-    setStep('students');
-  }
+  }, [open, classInfo.students]);
 
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
     setAttendance(prev => ({ ...prev, [studentId]: status }));
@@ -84,6 +83,8 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
         return;
     }
 
+    const parsedDate = parseISO(attendanceDate);
+
     try {
         const batch = writeBatch(firestore);
         const attendanceCollectionRef = collection(firestore, `courses/${classInfo.id}/attendance_records`);
@@ -94,7 +95,7 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
                 id: newRecordRef.id,
                 studentId: studentId,
                 courseId: classInfo.id,
-                date: Timestamp.fromDate(attendanceDate),
+                date: Timestamp.fromDate(parsedDate),
                 status: status,
                 markedBy: "admin", // Placeholder for user who marked attendance
             });
@@ -104,7 +105,7 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
         
         toast({
           title: 'Attendance Saved',
-          description: `Attendance for ${classInfo.courseName} on ${format(attendanceDate, 'PPP')} has been recorded.`,
+          description: `Attendance for ${classInfo.courseName} on ${format(parsedDate, 'PPP')} has been recorded.`,
           className: 'bg-accent text-accent-foreground',
         });
         onOpenChange(false);
@@ -120,83 +121,70 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className={step === 'date' ? 'sm:max-w-md' : 'max-w-4xl w-full'}
-        >
+      <DialogContent className='max-w-4xl w-full'>
         <DialogHeader>
           <DialogTitle>Mark Attendance: {classInfo.courseName}</DialogTitle>
           <DialogDescription>
-            {step === 'date' 
-              ? `Select the date for which you want to mark attendance. Today is ${format(new Date(), 'PPP')}.`
-              : `Mark the status for each student for ${format(attendanceDate!, 'PPP')}.`
-            }
+            Enter the date and mark the status for each student.
           </DialogDescription>
         </DialogHeader>
         
-        {step === 'date' && (
-            <div className='flex justify-center py-4'>
-                 <Calendar 
-                    mode="single"
-                    selected={attendanceDate}
-                    onSelect={(day) => day && handleDateSelect(day)}
-                    disabled={(date) => date > new Date()}
-                    initialFocus
-                 />
-            </div>
-        )}
-
-        {step === 'students' && (
-            <div className="grid gap-4 my-4" style={{gridTemplateColumns: '1fr'}}>
-                <div className='flex justify-end gap-2'>
+        <div className="grid gap-4 my-4" style={{gridTemplateColumns: '1fr'}}>
+            <div className='flex items-center gap-4'>
+                <div className='grid gap-1.5'>
+                    <Label htmlFor="attendance-date">Attendance Date</Label>
+                    <Input 
+                        id="attendance-date"
+                        type="date" 
+                        value={attendanceDate}
+                        onChange={(e) => setAttendanceDate(e.target.value)}
+                        className="w-[240px]"
+                    />
+                </div>
+                <div className='flex self-end gap-2'>
                     <Button variant="outline" size="sm" onClick={() => markAll('present')}>Mark All Present</Button>
                     <Button variant="outline" size="sm" onClick={() => markAll('absent')}>Mark All Absent</Button>
                 </div>
-                <div className="overflow-y-auto border rounded-md" style={{maxHeight: 'calc(100vh - 350px)'}}>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                            <TableHead>Student</TableHead>
-                            <TableHead className='text-center'>Present</TableHead>
-                            <TableHead className='text-center'>Absent</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {classInfo.students.map((student) => (
-                            <TableRow key={student.id}>
-                                <TableCell>
-                                <div className="font-medium">{student.firstName} {student.lastName}</div>
-                                <div className="text-sm text-muted-foreground">{student.studentId}</div>
-                                </TableCell>
-                                <RadioGroup 
-                                    defaultValue="present" 
-                                    className="contents"
-                                    onValueChange={(value) => handleStatusChange(student.id, value as AttendanceStatus)}
-                                    value={attendance[student.id]}
-                                >
-                                    <TableCell className="text-center">
-                                        <RadioGroupItem value="present" id={`${student.id}-present`} />
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                        <RadioGroupItem value="absent" id={`${student.id}-absent`} />
-                                    </TableCell>
-                                </RadioGroup>
-                            </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
             </div>
-        )}
+            <div className="overflow-y-auto border rounded-md" style={{maxHeight: 'calc(100vh - 350px)'}}>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                        <TableHead>Student</TableHead>
+                        <TableHead className='text-center'>Present</TableHead>
+                        <TableHead className='text-center'>Absent</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {classInfo.students.map((student) => (
+                        <TableRow key={student.id}>
+                            <TableCell>
+                            <div className="font-medium">{student.firstName} {student.lastName}</div>
+                            <div className="text-sm text-muted-foreground">{student.studentId}</div>
+                            </TableCell>
+                            <RadioGroup 
+                                defaultValue="present" 
+                                className="contents"
+                                onValueChange={(value) => handleStatusChange(student.id, value as AttendanceStatus)}
+                                value={attendance[student.id]}
+                            >
+                                <TableCell className="text-center">
+                                    <RadioGroupItem value="present" id={`${student.id}-present`} />
+                                </TableCell>
+                                <TableCell className="text-center">
+                                    <RadioGroupItem value="absent" id={`${student.id}-absent`} />
+                                </TableCell>
+                            </RadioGroup>
+                        </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+        </div>
 
         <DialogFooter className='mt-4'>
-          {step === 'date' ? (
-              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          ) : (
-             <>
-                <Button variant="outline" onClick={() => setStep('date')}>Back</Button>
-                <Button onClick={handleSave}>Save Attendance</Button>
-             </>
-          )}
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button onClick={handleSave}>Save Attendance</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

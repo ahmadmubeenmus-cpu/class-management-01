@@ -33,14 +33,6 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-     /* Day-picker variables */
-    --rdp-cell-size: 40px;
-    --rdp-caption-font-size: 18px;
-    --rdp-accent-color: hsl(var(--primary));
-    --rdp-background-color: hsl(var(--card));
-    --rdp-accent-color-dark: hsl(var(--primary));
-    --rdp-background-color-dark: hsl(var(--card));
-    --rdp-selected-color: hsl(var(--primary-foreground));
   }
   .dark {
     --background: 222.2 84% 4.9%;
