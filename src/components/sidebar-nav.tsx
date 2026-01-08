@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, BookUser, Users, School, Database, User } from "lucide-react";
+import { LayoutDashboard, BookUser, Users, School, Database, User, UserCog } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 const navItems = [
@@ -12,6 +12,7 @@ const navItems = [
     { href: "/students", label: "Students", icon: Users },
     { href: "/attendance", label: "Attendance", icon: BookUser },
     { href: "/records", label: "Records", icon: Database },
+    { href: "/profile", label: "Profile", icon: UserCog },
     { href: "/admin", label: "Admin", icon: User },
 ]
 

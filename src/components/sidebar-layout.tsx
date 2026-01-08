@@ -1,8 +1,11 @@
 'use client';
 import { useState, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Header } from "./header";
 import { SidebarNav } from "./sidebar-nav";
 import { cn } from "@/lib/utils";
+import { useUser } from "@/firebase/auth/use-user";
+import Loading from "@/app/loading";
 
 export function SidebarLayout({
   children,
@@ -11,6 +14,9 @@ export function SidebarLayout({
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const { user, isLoading } = useUser();
+  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const storedState = localStorage.getItem('sidebar-collapsed');
@@ -19,6 +25,12 @@ export function SidebarLayout({
     }
   }, []);
 
+  useEffect(() => {
+    if (!isLoading && !user && pathname !== '/login') {
+      router.push('/login');
+    }
+  }, [user, isLoading, router, pathname]);
+
   const toggleSidebar = () => {
     setIsSidebarCollapsed(prevState => {
         const newState = !prevState;
@@ -26,6 +38,20 @@ export function SidebarLayout({
         return newState;
     });
   };
+
+  if (isLoading && pathname !== '/login') {
+    return <Loading />;
+  }
+
+  if (!user && pathname !== '/login') {
+    // Still loading or redirecting
+    return <Loading />;
+  }
+  
+  if (pathname === '/login') {
+    return <>{children}</>;
+  }
+
 
   return (
     <>

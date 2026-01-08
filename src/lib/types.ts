@@ -6,6 +6,8 @@ export interface UserProfile {
   lastName: string;
   email: string;
   role?: 'admin' | 'user';
+  profilePictureUrl?: string;
+  username?: string;
 }
 
 export interface Student {

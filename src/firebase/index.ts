@@ -2,11 +2,13 @@
 import { useMemo } from 'react';
 import { initializeApp, getApp, getApps, type FirebaseOptions } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
+import { getAuth, Auth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 import { useCollection } from './firestore/use-collection';
 import { useDoc } from './firestore/use-doc';
 import { FirebaseProvider, useFirebase, useFirebaseApp, useFirestore, useAuth } from './provider';
 import { FirebaseClientProvider } from './client-provider';
+import { useUser } from './auth/use-user';
 import {
   addDocumentNonBlocking,
   setDocumentNonBlocking,
@@ -16,6 +18,7 @@ import {
 
 let firebaseApp: any;
 let firestore: any;
+let auth: any;
 
 function initializeFirebase(config: FirebaseOptions) {
   if (getApps().length === 0) {
@@ -24,8 +27,9 @@ function initializeFirebase(config: FirebaseOptions) {
     firebaseApp = getApp();
   }
   firestore = getFirestore(firebaseApp);
+  auth = getAuth(firebaseApp);
 
-  return { firebaseApp, firestore };
+  return { firebaseApp, firestore, auth };
 }
 
 function useMemoFirebase<T>(factory: () => T, deps: React.DependencyList): T {
@@ -48,6 +52,7 @@ export {
   useFirebaseApp,
   useFirestore,
   useAuth,
+  useUser,
   useMemoFirebase,
   addDocumentNonBlocking,
   setDocumentNonBlocking,
