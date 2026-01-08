@@ -8,6 +8,11 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { GraduationCap } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth, useFirestore } from '@/firebase';
+import { signInAnonymously } from 'firebase/auth';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import type { Student } from '@/lib/types';
+
 
 export default function StudentLoginPage() {
   const [uid, setUid] = useState('');
@@ -15,25 +20,43 @@ export default function StudentLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const auth = useAuth();
+  const firestore = useFirestore();
 
   const handleSignIn = async () => {
+    if(!auth || !firestore) {
+        toast({ variant: 'destructive', title: 'Firebase not initialized.'});
+        return;
+    }
+
     setIsLoading(true);
     try {
-      const response = await fetch('/api/student-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid, password }),
-      });
+      // Step 1: Sign in anonymously to get permissions to query
+      await signInAnonymously(auth);
 
-      const data = await response.json();
+      // Step 2: Query for the student document with the given UID
+      const studentsRef = collection(firestore, 'students');
+      const q = query(studentsRef, where('uid', '==', uid), limit(1));
+      const querySnapshot = await getDocs(q);
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+      if (querySnapshot.empty) {
+        throw new Error('Invalid credentials');
+      }
+
+      const studentDoc = querySnapshot.docs[0];
+      const studentData = { id: studentDoc.id, ...studentDoc.data() } as Student;
+      
+      // Step 3: Verify the password
+      if (studentData.password !== password) {
+        throw new Error('Invalid credentials');
       }
       
-      // Store student info in session storage for the client-side session
-      sessionStorage.setItem('student', JSON.stringify(data.student));
+      // Step 4: Store student info in session storage
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password: _, ...studentInfo } = studentData;
+      sessionStorage.setItem('student', JSON.stringify(studentInfo));
 
+      // Step 5: Redirect to the student attendance page
       router.push('/student/attendance');
 
     } catch (error: any) {
@@ -42,6 +65,9 @@ export default function StudentLoginPage() {
         title: 'Login Failed',
         description: error.message,
       });
+       if(auth.currentUser) {
+         await auth.signOut(); // Sign out the anonymous user on failure
+       }
     } finally {
       setIsLoading(false);
     }

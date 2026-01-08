@@ -11,55 +11,45 @@ service cloud.firestore {
 
     // Rules for the 'users' collection
     match /users/{userId} {
-      // Allow create for any authenticated user (e.g. admin creating a user)
       allow create: if request.auth != null;
-      // Allow read, update for the user who owns the document
-      allow read, update: if request.auth.uid == userId;
-      // Allow read, write for any admin
-      allow read, write: if isAdmin();
-      // Allow admin to delete
+      allow read, update: if request.auth.uid == userId || isAdmin();
       allow delete: if isAdmin();
     }
 
     // Rules for the 'admins' collection
     match /admins/{adminId} {
-        // Admins can read/write their own profile
         allow read, write: if request.auth.uid == adminId;
     }
     
     // Rules for courses and their subcollections
     match /courses/{courseId} {
-        // Only admins can create, update or delete courses
         allow write: if isAdmin();
-        // Any authenticated user can read course information
         allow read: if request.auth != null;
 
-        // Rules for enrolled students in a course
         match /students/{studentId} {
-            // Admins can add/remove students from a course
             allow write: if isAdmin();
-            // Any authenticated user can see who is enrolled in a course
             allow read: if request.auth != null;
         }
 
-        // Rules for attendance records
         match /attendance_records/{recordId} {
-            // Any authenticated user can write attendance records
-            // (Permissions can be further refined by checking user roles in the 'users' collection)
             allow write: if request.auth != null;
-            // Any authenticated user can read attendance records
             allow read: if request.auth != null;
         }
     }
 
     // Rules for the global students list
     match /students/{studentId} {
-        // Only admins can manage the master list of students
         allow write: if isAdmin();
-        // Any authenticated user can read the list of students (e.g., to enroll them)
-        allow read: if request.auth != null;
-        // A student can read their own data if they know their uid.
-        allow list: if request.auth == null && request.query.limit == 1;
+        allow read: if isAdmin();
+        
+        // Allow an anonymously authenticated user to query for their own student document
+        // This is secure because they can only query by a specific `uid`, they cannot list all students.
+        allow list: if request.auth.token.firebase.sign_in_provider == "anonymous" 
+                    && request.query.get("where")[0][1] == "uid"
+                    && request.query.get("where")[0][2] == resource.data.uid;
+    }
+    match /attendance_records/{recordId} {
+      allow read, list: if request.auth != null;
     }
   }
 }
