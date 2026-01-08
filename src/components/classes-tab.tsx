@@ -19,12 +19,11 @@ import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firesto
 import type { Course, Student } from '@/lib/types';
 import { ViewStudentsDialog } from './view-students-dialog';
 import { AddStudentDialog } from './add-student-dialog';
-
+import { EnrollStudentDialog } from './enroll-student-dialog';
 
 interface CourseWithStudents extends Course {
   students: Student[];
 }
-
 
 export function ClassesTab() {
   const firestore = useFirestore();
@@ -35,7 +34,7 @@ export function ClassesTab() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isStudentsDialogOpen, setIsStudentsDialogOpen] = useState(false);
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
-
+  const [isEnrollStudentDialogOpen, setIsEnrollStudentDialogOpen] = useState(false);
 
   const handleMarkAttendance = async (classItem: Course) => {
     if (!firestore) return;
@@ -73,13 +72,35 @@ export function ClassesTab() {
   };
 
   const handleViewStudents = async (classItem: Course) => {
-    await handleMarkAttendance(classItem); // re-uses the same student fetching logic
+    if (!firestore) return;
+
+    const studentsRef = collection(firestore, `courses/${classItem.id}/students`);
+    const studentEnrollments = await getDocs(studentsRef);
+    const studentIds = studentEnrollments.docs.map(d => d.id);
+
+    const studentsList: Student[] = [];
+    if (studentIds.length > 0) {
+      const studentDocsQuery = query(collection(firestore, 'students'), where('id', 'in', studentIds));
+      const studentDocsSnapshot = await getDocs(studentDocsQuery);
+      
+      studentDocsSnapshot.forEach(doc => {
+          studentsList.push({ id: doc.id, ...doc.data() } as Student);
+      });
+      studentsList.sort((a, b) => a.firstName.localeCompare(b.firstName));
+    }
+    
+    setSelectedClass({ ...classItem, students: studentsList });
     setIsStudentsDialogOpen(true);
   }
 
   const handleAddStudent = (classItem: Course) => {
     setSelectedClass({ ...classItem, students: [] });
     setIsAddStudentDialogOpen(true);
+  }
+
+  const handleEnrollStudent = (classItem: Course) => {
+    setSelectedClass({ ...classItem, students: [] });
+    setIsEnrollStudentDialogOpen(true);
   }
   
   return (
@@ -126,7 +147,8 @@ export function ClassesTab() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => handleAddStudent(classItem)}>Add Student</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAddStudent(classItem)}>Add New Student</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEnrollStudent(classItem)}>Enroll Student</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleViewStudents(classItem)}>View Students</DropdownMenuItem>
                         <DropdownMenuItem>Edit Class</DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive">Delete Class</DropdownMenuItem>
@@ -159,6 +181,13 @@ export function ClassesTab() {
             open={isAddStudentDialogOpen}
             onOpenChange={setIsAddStudentDialogOpen}
             courseId={selectedClass.id}
+        />
+      )}
+      {selectedClass && (
+        <EnrollStudentDialog
+            open={isEnrollStudentDialogOpen}
+            onOpenChange={setIsEnrollStudentDialogOpen}
+            course={selectedClass}
         />
       )}
     </>
