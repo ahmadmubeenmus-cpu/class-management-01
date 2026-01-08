@@ -27,17 +27,19 @@ interface EditStudentDialogProps {
 export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const [studentId, setStudentId] = useState('');
+  const [uid, setUid] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   useEffect(() => {
     if (student) {
-        setStudentId(student.studentId);
+        setUid(student.uid);
         setFirstName(student.firstName);
         setLastName(student.lastName);
         setEmail(student.email);
+        setPassword(student.password || '');
     }
   }, [student]);
 
@@ -45,11 +47,11 @@ export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDi
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!firestore || !student) return;
-    if (!studentId || !firstName || !lastName || !email) {
+    if (!uid || !firstName || !lastName || !email) {
         toast({
             variant: "destructive",
             title: "Missing fields",
-            description: "Please fill out all fields.",
+            description: "Please fill out all required fields.",
         });
         return;
     }
@@ -57,12 +59,18 @@ export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDi
     const studentRef = doc(firestore, 'students', student.id);
     
     try {
-        await updateDocumentNonBlocking(studentRef, {
-            studentId,
+        const updateData: Partial<Student> = {
+            uid,
             firstName,
             lastName,
-            email
-        });
+            email,
+        };
+        // Only update password if it has been changed
+        if (password && password !== student.password) {
+            updateData.password = password;
+        }
+
+        await updateDocumentNonBlocking(studentRef, updateData);
 
         toast({
             title: 'Student Updated',
@@ -92,10 +100,10 @@ export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDi
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="studentId" className="text-right">
-                Student ID
+              <Label htmlFor="uid" className="text-right">
+                Student UID
               </Label>
-              <Input id="studentId" value={studentId} onChange={e => setStudentId(e.target.value)} className="col-span-3" />
+              <Input id="uid" value={uid} onChange={e => setUid(e.target.value)} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="firstName" className="text-right">
@@ -114,6 +122,12 @@ export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDi
                 Email
               </Label>
               <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="password" className="text-right">
+                Password
+              </Label>
+              <Input id="password" type="text" value={password} onChange={e => setPassword(e.target.value)} className="col-span-3" placeholder="Leave blank to keep unchanged" />
             </div>
           </div>
           <DialogFooter>

@@ -87,18 +87,23 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
 
     try {
         const batch = writeBatch(firestore);
-        const attendanceCollectionRef = collection(firestore, `courses/${classInfo.id}/attendance_records`);
+        const attendanceCollectionRef = collection(firestore, 'attendance_records');
+        const studentMap = new Map(classInfo.students.map(s => [s.id, s]));
 
         Object.entries(attendance).forEach(([studentId, status]) => {
             const newRecordRef = doc(attendanceCollectionRef); // Auto-generates an ID
-            batch.set(newRecordRef, {
-                id: newRecordRef.id,
-                studentId: studentId,
-                courseId: classInfo.id,
-                date: Timestamp.fromDate(parsedDate),
-                status: status,
-                markedBy: "admin", // Placeholder for user who marked attendance
-            });
+            const student = studentMap.get(studentId);
+            if(student) {
+                 batch.set(newRecordRef, {
+                    id: newRecordRef.id,
+                    studentId: studentId,
+                    studentUid: student.uid,
+                    courseId: classInfo.id,
+                    date: Timestamp.fromDate(parsedDate),
+                    status: status,
+                    markedBy: "admin", // Placeholder for user who marked attendance
+                });
+            }
         });
 
         await batch.commit();
@@ -160,7 +165,7 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
                         <TableRow key={student.id}>
                             <TableCell>
                             <div className="font-medium">{student.firstName} {student.lastName}</div>
-                            <div className="text-sm text-muted-foreground">{student.studentId}</div>
+                            <div className="text-sm text-muted-foreground">{student.uid}</div>
                             </TableCell>
                             <RadioGroup 
                                 defaultValue="present" 

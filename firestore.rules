@@ -56,6 +56,9 @@ service cloud.firestore {
         allow write: if isAdmin();
         // Any authenticated user can read the list of students (e.g., to enroll them)
         allow read: if request.auth != null;
+        // A student can read their own data (needed for custom login/attendance view)
+        // This rule is permissive; in production, you might restrict this more.
+        allow get: if request.auth == null;
     }
   }
 }

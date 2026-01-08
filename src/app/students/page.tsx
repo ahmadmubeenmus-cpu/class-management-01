@@ -1,6 +1,6 @@
 'use client';
 import { useState, useMemo } from 'react';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Sparkles } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -11,8 +11,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { collection, doc, writeBatch } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
 import { AddStudentDialog } from '@/components/add-student-dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -20,20 +20,34 @@ import { EditStudentDialog } from '@/components/edit-student-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 
+function generateRandomString(length: number) {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return result;
+}
+
 export default function StudentsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const studentsQuery = useMemoFirebase(() => collection(firestore, 'students'), [firestore]);
-  const { data: students, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
+  const { data: students, isLoading: studentsLoading, error } = useCollection<Student>(studentsQuery);
   
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
   const [isEditStudentDialogOpen, setIsEditStudentDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const sortedStudents = useMemo(() => {
     if (!students) return [];
-    return [...students].sort((a, b) => (a.studentId || "").localeCompare(b.studentId || ""));
+    return [...students].sort((a, b) => (a.uid || "").localeCompare(b.uid || ""));
   }, [students]);
+
+  const studentsWithoutCredentials = useMemo(() => {
+    return sortedStudents.filter(s => !s.uid || !s.password);
+  }, [sortedStudents]);
 
   const handleEditStudent = (student: Student) => {
     setSelectedStudent(student);
@@ -55,6 +69,38 @@ export default function StudentsPage() {
     });
   }
 
+  const handleGenerateCredentials = async () => {
+    if (!firestore || studentsWithoutCredentials.length === 0) return;
+    setIsGenerating(true);
+
+    const batch = writeBatch(firestore);
+
+    studentsWithoutCredentials.forEach(student => {
+        const studentRef = doc(firestore, 'students', student.id);
+        const uid = generateRandomString(8);
+        const password = generateRandomString(12);
+        batch.update(studentRef, { uid, password });
+    });
+
+    try {
+        await batch.commit();
+        toast({
+            title: "Credentials Generated",
+            description: `Generated credentials for ${studentsWithoutCredentials.length} students.`,
+            className: 'bg-accent text-accent-foreground'
+        });
+    } catch (e) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to generate credentials for existing students.",
+        });
+    } finally {
+        setIsGenerating(false);
+    }
+  }
+
+
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
       <div className="flex items-center justify-between gap-2">
@@ -63,6 +109,14 @@ export default function StudentsPage() {
             <p className="text-muted-foreground">Manage all students in the system.</p>
         </div>
         <div className="flex items-center gap-2">
+            {studentsWithoutCredentials.length > 0 && (
+                <Button size="sm" className="h-8 gap-1" onClick={handleGenerateCredentials} disabled={isGenerating}>
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                       {isGenerating ? 'Generating...' : `Generate Credentials (${studentsWithoutCredentials.length})`}
+                    </span>
+                </Button>
+            )}
             <AddStudentDialog open={isAddStudentDialogOpen} onOpenChange={setIsAddStudentDialogOpen}>
                  <Button size="sm" className="h-8 gap-1">
                     <PlusCircle className="h-3.5 w-3.5" />
@@ -80,7 +134,7 @@ export default function StudentsPage() {
               <TableRow>
                 <TableHead className="w-[50px]">SR#</TableHead>
                 <TableHead>Student Name</TableHead>
-                <TableHead className="hidden md:table-cell">Roll No.</TableHead>
+                <TableHead className="hidden md:table-cell">Student UID</TableHead>
                 <TableHead className="hidden lg:table-cell">Email</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
@@ -105,7 +159,7 @@ export default function StudentsPage() {
                     <div className="font-medium">{student.firstName} {student.lastName}</div>
                      <div className="text-sm text-muted-foreground lg:hidden">{student.email}</div>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">{student.studentId}</TableCell>
+                  <TableCell className="hidden md:table-cell font-mono">{student.uid}</TableCell>
                   <TableCell className="hidden lg:table-cell">{student.email}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-2">

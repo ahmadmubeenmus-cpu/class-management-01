@@ -60,7 +60,7 @@ export default function ClassesPage() {
       }
     }
     
-    allStudents.sort((a, b) => (a.studentId || "").localeCompare(b.studentId || ""));
+    allStudents.sort((a, b) => (a.uid || "").localeCompare(b.uid || ""));
   
     return allStudents;
   }

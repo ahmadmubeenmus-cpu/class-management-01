@@ -1,8 +1,6 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,20 +9,33 @@ import { useToast } from '@/hooks/use-toast';
 import { GraduationCap } from 'lucide-react';
 import Link from 'next/link';
 
-export default function LoginPage() {
-  const [email, setEmail] = useState('admin@example.com');
-  const [password, setPassword] = useState('12345678');
+export default function StudentLoginPage() {
+  const [uid, setUid] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
   const handleSignIn = async () => {
-    if (!auth) return;
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push('/dashboard');
+      const response = await fetch('/api/student-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+      
+      // Store student info in session storage for the client-side session
+      sessionStorage.setItem('student', JSON.stringify(data.student));
+
+      router.push('/student/attendance');
+
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -46,19 +57,19 @@ export default function LoginPage() {
                 </div>
             </CardHeader>
             <CardHeader>
-                <CardTitle className="text-2xl">Admin/Faculty Login</CardTitle>
-                <CardDescription>Enter your credentials to access your account.</CardDescription>
+                <CardTitle className="text-2xl">Student Login</CardTitle>
+                <CardDescription>Enter your credentials to view your attendance.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
             <div className="grid gap-2">
-                <Label htmlFor="email-signin">Email</Label>
+                <Label htmlFor="uid">Student UID</Label>
                 <Input
-                id="email-signin"
-                type="email"
-                placeholder="admin@example.com"
+                id="uid"
+                type="text"
+                placeholder="Your unique ID"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={uid}
+                onChange={(e) => setUid(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSignIn()}
                 />
             </div>
@@ -74,12 +85,12 @@ export default function LoginPage() {
                 />
             </div>
             </CardContent>
-            <CardFooter className='flex-col gap-4'>
+            <CardFooter className='flex flex-col gap-4'>
                 <Button className="w-full" onClick={handleSignIn} disabled={isLoading}>
                     {isLoading ? 'Signing In...' : 'Sign In'}
                 </Button>
-                <Link href="/student/login" className="text-sm text-center text-muted-foreground hover:underline">
-                    Are you a student?
+                <Link href="/login" className="text-sm text-center text-muted-foreground hover:underline">
+                    Are you an admin or faculty?
                 </Link>
             </CardFooter>
         </Card>

@@ -18,6 +18,16 @@ import Papa from 'papaparse';
 import { useFirestore } from '@/firebase';
 import { collection, writeBatch, doc } from 'firebase/firestore';
 
+function generateRandomString(length: number) {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return result;
+}
+
+
 interface BulkUploadDialogProps {
   children?: React.ReactNode;
 }
@@ -50,15 +60,15 @@ export function BulkUploadDialog({ children }: BulkUploadDialogProps) {
       header: true,
       skipEmptyLines: true,
       complete: async (results) => {
-        const students = results.data as { studentId: string; name: string, email: string }[];
-        const requiredFields = ['studentId', 'name', 'email'];
+        const students = results.data as { name: string, email: string }[];
+        const requiredFields = ['name', 'email'];
         const hasRequiredFields = results.meta.fields && requiredFields.every(field => results.meta.fields?.includes(field));
 
         if (!students.length || !hasRequiredFields) {
             toast({
                 variant: 'destructive',
                 title: 'Invalid File Format',
-                description: 'The CSV file is empty or does not contain the required headers: "studentId", "name", and "email".',
+                description: 'The CSV file is empty or does not contain the required headers: "name" and "email".',
             });
             setIsUploading(false);
             return;
@@ -69,16 +79,19 @@ export function BulkUploadDialog({ children }: BulkUploadDialogProps) {
             const studentsCollection = collection(firestore, 'students');
 
             students.forEach(student => {
-                if (student.studentId && student.name && student.email) {
+                if (student.name && student.email) {
                     const nameParts = student.name.trim().split(' ');
                     const firstName = nameParts[0] || '';
                     const lastName = nameParts.slice(1).join(' ') || '';
+                    const uid = generateRandomString(8);
+                    const password = generateRandomString(12);
 
                     const newStudentRef = doc(studentsCollection);
                     
                     batch.set(newStudentRef, {
                         id: newStudentRef.id,
-                        studentId: student.studentId,
+                        uid,
+                        password,
                         firstName,
                         lastName,
                         email: student.email,
@@ -90,7 +103,7 @@ export function BulkUploadDialog({ children }: BulkUploadDialogProps) {
 
             toast({
                 title: 'Upload Successful',
-                description: `${students.length} students have been added.`,
+                description: `${students.length} students have been added with auto-generated credentials.`,
                 className: 'bg-accent text-accent-foreground',
             });
 
@@ -126,7 +139,7 @@ export function BulkUploadDialog({ children }: BulkUploadDialogProps) {
         <DialogHeader>
           <DialogTitle>Bulk Student Upload</DialogTitle>
           <DialogDescription>
-            Upload a CSV file with student details. The file must contain 'studentId' (roll number), 'name', and 'email' columns.
+            Upload a CSV file with student details. The file must contain 'name' and 'email' columns. A unique UID and password will be generated for each student.
           </DialogDescription>
         </DialogHeader>
         <div className="grid flex-1 gap-2">

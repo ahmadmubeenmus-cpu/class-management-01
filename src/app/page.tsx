@@ -13,7 +13,13 @@ export default function Home() {
       if (user) {
         router.replace('/dashboard');
       } else {
-        router.replace('/login');
+        // Check if a student is logged in via session storage
+        const studentData = sessionStorage.getItem('student');
+        if (studentData) {
+            router.replace('/student/attendance');
+        } else {
+            router.replace('/login');
+        }
       }
     }
   }, [router, user, isLoading]);
