@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface AttendanceStat {
     courseName: string;
@@ -146,8 +147,8 @@ export default function StudentAttendancePage() {
 
                 {isLoading && (
                      <div className='space-y-4'>
-                        <Skeleton className="h-48 w-full" />
-                        <Skeleton className="h-48 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-24 w-full" />
                     </div>
                 )}
                 
@@ -159,43 +160,51 @@ export default function StudentAttendancePage() {
                     </Card>
                 )}
 
-                {!isLoading && stats.map((stat, index) => (
-                    <Card key={index}>
-                        <CardHeader>
-                            <CardTitle>{stat.courseName}</CardTitle>
-                            <CardDescription>
-                                Overall: {stat.present} / {stat.total} days present ({stat.percentage}%)
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead className="text-right">Status</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {stat.details.map(record => (
-                                        <TableRow key={record.id}>
-                                            <TableCell>{format(record.date, 'PPP')}</TableCell>
-                                            <TableCell className="text-right font-medium">
-                                                <span className={record.status === 'present' ? 'text-green-600' : 'text-red-600'}>
-                                                    {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
-                                                </span>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {stat.details.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={2} className="text-center">No records yet for this class.</TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                ))}
+                {!isLoading && stats.length > 0 && (
+                    <Accordion type="single" collapsible className="w-full space-y-4">
+                        {stats.map((stat, index) => (
+                           <Card key={index}>
+                             <AccordionItem value={`item-${index}`} className="border-b-0">
+                                <AccordionTrigger className="p-6 hover:no-underline">
+                                    <div className='flex flex-col text-left'>
+                                        <CardTitle>{stat.courseName}</CardTitle>
+                                        <CardDescription className="pt-1">
+                                            Overall: {stat.present} / {stat.total} days present ({stat.percentage}%)
+                                        </CardDescription>
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="px-6 pb-6">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Date</TableHead>
+                                                <TableHead className="text-right">Status</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {stat.details.map(record => (
+                                                <TableRow key={record.id}>
+                                                    <TableCell>{format(record.date, 'PPP')}</TableCell>
+                                                    <TableCell className="text-right font-medium">
+                                                        <span className={record.status === 'present' ? 'text-green-600' : 'text-red-600'}>
+                                                            {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+                                                        </span>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                            {stat.details.length === 0 && (
+                                                <TableRow>
+                                                    <TableCell colSpan={2} className="text-center">No records yet for this class.</TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </AccordionContent>
+                            </AccordionItem>
+                           </Card>
+                        ))}
+                    </Accordion>
+                )}
             </main>
         </div>
     );
