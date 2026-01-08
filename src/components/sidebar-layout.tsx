@@ -1,19 +1,27 @@
 'use client';
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Header } from "./header";
-import { cn } from "@/lib/utils";
 import { useUser } from "@/firebase/auth/use-user";
 import Loading from "@/app/loading";
 
 const NO_LAYOUT_ROUTES = ['/login', '/student/login', '/student/attendance'];
+
+// Define permissions for each route
+const ROUTE_PERMISSIONS: Record<string, keyof NonNullable<UserContextValue['userProfile']>['permissions']> = {
+    '/dashboard': 'canViewDashboard',
+    '/attendance': 'canMarkAttendance',
+    '/records': 'canViewRecords',
+    // Classes and Students pages don't have a specific permission in the model,
+    // so we'll treat them as admin-only for now unless specified.
+};
 
 export function SidebarLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isAdmin, isLoading } = useUser();
+  const { user, userProfile, isAdmin, isLoading } = useUser();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -25,17 +33,46 @@ export function SidebarLayout({
     }
 
     if (!user && isLayoutRequired) {
-      router.push('/login');
-    } else if (user && pathname === '/login') {
-      router.push('/dashboard');
+      router.replace('/login');
+      return;
+    } 
+    
+    if (user && pathname === '/login') {
+      router.replace('/dashboard');
+      return;
     }
 
-    // Protect admin route
-    if (pathname.startsWith('/admin') && !isAdmin) {
-        router.push('/dashboard');
+    if(!isLayoutRequired) return;
+
+    // If we have a user, check permissions
+    if (userProfile) {
+        // Admins can go anywhere
+        if(isAdmin) return;
+
+        // For non-admins, check route permissions
+        const requiredPermission = ROUTE_PERMISSIONS[pathname];
+        
+        if (requiredPermission && !userProfile.permissions?.[requiredPermission]) {
+             // Redirect if they lack permission for a specific route
+             router.replace('/attendance'); // default page for them
+             return;
+        }
+
+        // Block non-admins from admin, classes, and students pages
+        if(pathname.startsWith('/admin') || pathname.startsWith('/classes') || pathname.startsWith('/students')) {
+            router.replace('/attendance');
+            return;
+        }
+
+        // If a non-admin lands on the root, redirect them to their default page
+        if(pathname === '/dashboard' && !userProfile.permissions?.canViewDashboard) {
+             router.replace('/attendance');
+             return;
+        }
     }
 
-  }, [user, isAdmin, isLoading, router, pathname, isLayoutRequired]);
+
+  }, [user, userProfile, isAdmin, isLoading, router, pathname, isLayoutRequired]);
 
   // If it's a protected route and we're still checking auth, show loading
   if (isLoading && isLayoutRequired) {

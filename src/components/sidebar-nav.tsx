@@ -9,8 +9,8 @@ import { useUser } from "@/firebase/auth/use-user";
 
 const allNavItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, requiredPermission: 'canViewDashboard' },
-    { href: "/classes", label: "Classes", icon: School },
-    { href: "/students", label: "Students", icon: Users },
+    { href: "/classes", label: "Classes", icon: School, adminOnly: true },
+    { href: "/students", label: "Students", icon: Users, adminOnly: true },
     { href: "/attendance", label: "Attendance", icon: BookUser, requiredPermission: 'canMarkAttendance' },
     { href: "/records", label: "Records", icon: Database, requiredPermission: 'canViewRecords' },
     { href: "/profile", label: "Profile", icon: UserCog },
@@ -22,17 +22,19 @@ export function SidebarNav({ onLinkClick, isCollapsed }: { onLinkClick?: () => v
   const { isAdmin, userProfile } = useUser();
 
   const navItems = allNavItems.filter(item => {
-    if (item.adminOnly) {
-        return isAdmin;
-    }
+    // Admins see everything
     if (isAdmin) {
-        return true; // Admins see everything
+        return true;
     }
+    // Hide admin-only items from non-admins
+    if (item.adminOnly) {
+        return false;
+    }
+    // For items that require a specific permission
     if (item.requiredPermission) {
         return userProfile?.permissions?.[item.requiredPermission as keyof typeof userProfile.permissions] ?? false;
     }
-    // Items without specific permissions are visible to non-admins by default
-    // unless they are adminOnly
+    // For items without a specific permission (like Profile), show them to all logged-in users
     return true;
   })
 
