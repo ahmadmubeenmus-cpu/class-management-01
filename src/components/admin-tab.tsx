@@ -1,7 +1,10 @@
 'use client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Upload, UserPlus } from 'lucide-react';
+import { PlusCircle, UserPlus } from 'lucide-react';
+import { BulkUploadDialog } from './bulk-upload-dialog';
+import { AddStudentDialog } from './add-student-dialog';
+import { AddClassDialog } from './add-class-dialog';
 
 export function AdminTab() {
   return (
@@ -32,10 +35,7 @@ export function AdminTab() {
             <CardDescription>Create new courses and enroll students.</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-end">
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Manage Courses
-            </Button>
+            <AddClassDialog />
           </CardContent>
         </Card>
         <Card>
@@ -44,14 +44,8 @@ export function AdminTab() {
             <CardDescription>Bulk upload or manually add students.</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-end gap-2">
-            <Button variant="outline">
-                <Upload className="mr-2 h-4 w-4" />
-                Bulk Upload
-            </Button>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Student
-            </Button>
+            <BulkUploadDialog />
+            <AddStudentDialog />
           </CardContent>
         </Card>
       </div>
