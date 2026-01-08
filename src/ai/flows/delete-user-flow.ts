@@ -25,15 +25,13 @@ export const DeleteUserOutputSchema = z.object({
 export type DeleteUserOutput = z.infer<typeof DeleteUserOutputSchema>;
 
 
-// Initialize Firebase Admin SDK if it hasn't been already.
-// This ensures we have a single, configured instance.
-let adminApp: App;
-if (!getApps().length) {
-    adminApp = initializeApp();
-} else {
-    adminApp = getApps()[0]!;
+// Helper function to initialize Firebase Admin SDK
+function getAdminApp() {
+    if (getApps().length > 0) {
+        return getApps()[0]!;
+    }
+    return initializeApp();
 }
-
 
 // Exported wrapper function to be called from the client
 export async function deleteUser(input: DeleteUserInput): Promise<DeleteUserOutput> {
@@ -49,11 +47,11 @@ const deleteUserFlow = ai.defineFlow(
   },
   async (input) => {
     const { userId } = input;
+    const adminApp = getAdminApp();
+    const auth = getAuth(adminApp);
+    const firestore = getFirestore(adminApp);
 
     try {
-      const auth = getAuth(adminApp);
-      const firestore = getFirestore(adminApp);
-
       // Step 1: Delete the user from Firebase Authentication
       await auth.deleteUser(userId);
 
@@ -74,11 +72,23 @@ const deleteUserFlow = ai.defineFlow(
       // Provide more specific error messages
       let errorMessage = 'An unexpected error occurred while deleting the user.';
       if (error.code === 'auth/user-not-found') {
-        errorMessage = 'User not found in Firebase Authentication. They may have already been deleted.';
+        // If user not in Auth, still try to delete from Firestore
+        try {
+            const userDocRef = firestore.collection('users').doc(userId);
+            await userDocRef.delete();
+            return {
+                success: true,
+                message: `User not found in Authentication, but deleted from Firestore.`,
+            };
+        } catch (dbError) {
+             errorMessage = "User not found in Auth, and failed to delete from Firestore.";
+        }
+
       } else if (error.message) {
         errorMessage = error.message;
       }
       
+      // We must throw an error to signal failure to the caller
       throw new Error(errorMessage);
     }
   }

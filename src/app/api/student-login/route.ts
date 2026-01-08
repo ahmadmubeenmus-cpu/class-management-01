@@ -1,20 +1,21 @@
+'use server';
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeApp, getApps, App } from 'firebase-admin/app';
+import { initializeApp, getApps, App, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { Student } from '@/lib/types';
 
-
-let adminApp: App;
-if (!getApps().length) {
-    // This will use Application Default Credentials in a GCP environment.
-    adminApp = initializeApp();
-} else {
-  adminApp = getApps()[0]!;
+// Helper function to initialize Firebase Admin SDK
+function getAdminApp() {
+    if (getApps().length > 0) {
+        return getApps()[0]!;
+    }
+    return initializeApp();
 }
 
-const firestore = getFirestore(adminApp);
-
 export async function POST(req: NextRequest) {
+  const adminApp = getAdminApp();
+  const firestore = getFirestore(adminApp);
+
   try {
     const { uid, password } = await req.json();
 
@@ -32,16 +33,15 @@ export async function POST(req: NextRequest) {
     const studentDoc = querySnapshot.docs[0];
     const studentData = studentDoc.data() as Student;
 
-    // In a real app, passwords should be hashed. This is a simple comparison for demonstration.
+    // NOTE: This is a simple string comparison. In a real-world production app,
+    // you should use a secure hashing library (like bcrypt) to store and compare passwords.
     if (studentData.password !== password) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    // Don't send the password back to the client
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...studentInfo } = studentData;
 
-    // Set a session cookie or token here for subsequent requests
-    // For simplicity, we are returning student info. In a real app, use a secure session mechanism.
     return NextResponse.json({ success: true, student: studentInfo }, { status: 200 });
 
   } catch (error) {

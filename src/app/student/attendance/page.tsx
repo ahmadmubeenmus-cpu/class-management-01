@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 import type { Course, Student, AttendanceRecord } from '@/lib/types';
 import { format } from 'date-fns';
@@ -53,20 +53,25 @@ export default function StudentAttendancePage() {
                         enrolledCourseIds.push(courseDoc.id);
                     }
                 }
-
+                
                 // 2. Fetch all attendance records for that student
-                const attendanceRef = collection(firestore, `students/${student.id}/attendance`);
-                const q = query(collection(firestore, 'attendance_records'), where('studentId', '==', student.id));
+                const attendanceRef = collection(firestore, 'attendance_records');
+                const q = query(attendanceRef, where('studentId', '==', student.id));
                 const attendanceSnap = await getDocs(q);
                 
-                const records = attendanceSnap.docs.map(doc => ({ ...doc.data(), date: doc.data().date.toDate() })) as (AttendanceRecord & { date: Date })[];
+                const records = attendanceSnap.docs.map(doc => {
+                    const data = doc.data();
+                    const date = data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date);
+                    return { ...data, id: doc.id, date } as (AttendanceRecord & { date: Date });
+                });
+
 
                 // 3. Group records by course and calculate stats
                 const statsByCourse: Record<string, AttendanceStat> = {};
 
                 for (const courseId of enrolledCourseIds) {
-                    const courseDoc = await getDoc(doc(firestore, 'courses', courseId));
-                    const courseName = courseDoc.data()?.courseName || 'Unknown Course';
+                    const courseDocSnap = await getDoc(doc(firestore, 'courses', courseId));
+                    const courseName = courseDocSnap.data()?.courseName || 'Unknown Course';
                     statsByCourse[courseId] = {
                         courseName,
                         present: 0,
@@ -75,10 +80,25 @@ export default function StudentAttendancePage() {
                         details: []
                     };
                 }
+                
+                // Get all dates for each course to calculate total classes
+                const allCourseDates: Record<string, Set<string>> = {};
+
+                const allRecordsQuery = query(collection(firestore, 'attendance_records'), where('courseId', 'in', enrolledCourseIds.length > 0 ? enrolledCourseIds : ['dummyId']));
+                const allRecordsSnap = await getDocs(allRecordsQuery);
+
+                allRecordsSnap.forEach(docSnap => {
+                    const record = docSnap.data();
+                    const dateStr = format(record.date.toDate(), 'yyyy-MM-dd');
+                    if (!allCourseDates[record.courseId]) {
+                        allCourseDates[record.courseId] = new Set();
+                    }
+                    allCourseDates[record.courseId].add(dateStr);
+                });
+
 
                 records.forEach(record => {
                     if (statsByCourse[record.courseId]) {
-                        statsByCourse[record.courseId].total++;
                         if (record.status === 'present') {
                             statsByCourse[record.courseId].present++;
                         }
@@ -87,7 +107,9 @@ export default function StudentAttendancePage() {
                 });
                 
                 // 4. Finalize calculations
-                Object.values(statsByCourse).forEach(stat => {
+                Object.entries(statsByCourse).forEach(([courseId, stat]) => {
+                    const totalClasses = allCourseDates[courseId]?.size || 0;
+                    stat.total = totalClasses;
                     stat.percentage = stat.total > 0 ? ((stat.present / stat.total) * 100).toFixed(2) : '0.00';
                     stat.details.sort((a, b) => b.date.getTime() - a.date.getTime());
                 });
