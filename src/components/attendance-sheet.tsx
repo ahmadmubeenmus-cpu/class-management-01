@@ -40,7 +40,7 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
     });
     return initialState;
   });
-  const [attendanceDate, setAttendanceDate] = useState<Date>(new Date());
+  const [attendanceDate, setAttendanceDate] = useState<Date | undefined>(new Date());
 
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
     setAttendance(prev => ({ ...prev, [studentId]: status }));
@@ -60,6 +60,15 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
             variant: "destructive",
             title: "Error",
             description: "Could not connect to the database.",
+        });
+        return;
+    }
+    
+    if (!attendanceDate) {
+        toast({
+            variant: "destructive",
+            title: "No Date Selected",
+            description: "Please select a date for the attendance.",
         });
         return;
     }
@@ -126,7 +135,7 @@ export function AttendanceSheet({ classInfo, open, onOpenChange }: AttendanceShe
                     <Calendar
                     mode="single"
                     selected={attendanceDate}
-                    onSelect={(date) => date && setAttendanceDate(date)}
+                    onSelect={setAttendanceDate}
                     disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                     initialFocus
                     />
