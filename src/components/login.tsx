@@ -10,15 +10,14 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { GraduationCap } from 'lucide-react';
-import { doc, setDoc } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
 
 export function Login() {
   const auth = useAuth();
@@ -32,47 +31,49 @@ export function Login() {
     if (!auth || !firestore) return;
 
     try {
-      // First, just try to sign in.
       await signInWithEmailAndPassword(auth, email, password);
       toast({ title: 'Signed in successfully' });
-    } catch (error: any) {
-      // If sign-in fails, check if it's because the user doesn't exist.
-      // 'auth/invalid-credential' can mean user not found or wrong password.
-      // We'll attempt to create the user only if it's the demo admin email.
-      if (error.code === 'auth/invalid-credential' && email === 'admin@example.com') {
+    } catch (signInError: any) {
+      // This specific error code can mean "user not found" or "wrong password".
+      // We'll proceed to create the user only if it's the designated admin email.
+      if (
+        signInError.code === 'auth/invalid-credential' &&
+        email === 'admin@example.com'
+      ) {
         try {
-          // Attempt to create the admin user.
-          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            email,
+            password
+          );
           const user = userCredential.user;
-          
-          // Also create the admin document in Firestore.
+
+          // Create the admin document in Firestore to grant permissions
           const adminRef = doc(firestore, 'admins', user.uid);
           await setDoc(adminRef, {
             id: user.uid,
             email: user.email,
             firstName: 'Admin',
             lastName: 'User',
-            role: 'super_admin'
+            role: 'super_admin',
           });
 
           toast({ title: 'Admin account created. Signed in successfully.' });
-          // The onAuthStateChanged listener in the provider will handle the redirect.
-
-        } catch (creationError: any) {
-          // This might fail if the user exists but the password was wrong on the first attempt.
-          // In that case, the original error message is more relevant.
-           toast({
+        } catch (signUpError: any) {
+          // This can happen if the user exists but the initial password was wrong.
+          // In that case, the original sign-in error is more accurate.
+          toast({
             variant: 'destructive',
             title: 'Authentication Error',
-            description: "Invalid email or password.",
+            description: 'Invalid email or password.',
           });
         }
       } else {
-        // For any other error, display it.
+        // For all other errors, show a generic message.
         toast({
           variant: 'destructive',
           title: 'Authentication Error',
-          description: "Invalid email or password.",
+          description: 'Invalid email or password.',
         });
       }
     }
