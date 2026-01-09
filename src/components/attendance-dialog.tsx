@@ -9,7 +9,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from './ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import type { Student, AttendanceStatus, Course } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -144,50 +143,46 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
                         type="date" 
                         value={attendanceDate}
                         onChange={(e) => setAttendanceDate(e.target.value)}
-                        className="w-[240px]"
+                        className="w-full sm:w-[240px]"
                     />
                 </div>
-                <div className='flex self-end gap-2'>
+                <div className='hidden sm:flex self-end gap-2'>
                     <Button variant="outline" size="sm" onClick={() => markAll('present')}>Mark All Present</Button>
                     <Button variant="outline" size="sm" onClick={() => markAll('absent')}>Mark All Absent</Button>
                 </div>
             </div>
-            <div className="overflow-y-auto border rounded-md" style={{maxHeight: 'calc(100vh - 350px)'}}>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Student</TableHead>
-                            <TableHead className='text-right'>Status</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {classInfo.students.map((student) => (
-                        <TableRow key={student.id}>
-                            <TableCell>
-                            <div className="font-medium">{student.firstName} {student.lastName}</div>
-                            <div className="text-sm text-muted-foreground">{student.rollNo}</div>
-                            </TableCell>
-                           <TableCell className="text-right">
-                                <RadioGroup 
-                                    defaultValue="present" 
-                                    className="flex justify-end gap-4"
-                                    onValueChange={(value) => handleStatusChange(student.id, value as AttendanceStatus)}
-                                    value={attendance[student.id]}
-                                >
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="present" id={`${student.id}-present`} />
-                                        <Label htmlFor={`${student.id}-present`}>Present</Label>
-                                    </div>
-                                     <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="absent" id={`${student.id}-absent`} />
-                                        <Label htmlFor={`${student.id}-absent`}>Absent</Label>
-                                    </div>
-                                </RadioGroup>
-                           </TableCell>
-                        </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+            <div className='flex sm:hidden gap-2'>
+                 <Button variant="outline" size="sm" className="w-full" onClick={() => markAll('present')}>All Present</Button>
+                 <Button variant="outline" size="sm" className="w-full" onClick={() => markAll('absent')}>All Absent</Button>
+            </div>
+            <div className="overflow-y-auto border rounded-md" style={{maxHeight: 'calc(100vh - 400px)'}}>
+                <div className='divide-y'>
+                    {classInfo.students.map((student) => (
+                    <div key={student.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 gap-4">
+                        <div>
+                        <div className="font-medium">{student.firstName} {student.lastName}</div>
+                        <div className="text-sm text-muted-foreground">{student.rollNo}</div>
+                        </div>
+                        <div className="shrink-0">
+                            <RadioGroup 
+                                defaultValue="present" 
+                                className="flex justify-end gap-4"
+                                onValueChange={(value) => handleStatusChange(student.id, value as AttendanceStatus)}
+                                value={attendance[student.id]}
+                            >
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="present" id={`${student.id}-present`} />
+                                    <Label htmlFor={`${student.id}-present`}>Present</Label>
+                                </div>
+                                 <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="absent" id={`${student.id}-absent`} />
+                                    <Label htmlFor={`${student.id}-absent`}>Absent</Label>
+                                </div>
+                            </RadioGroup>
+                       </div>
+                    </div>
+                    ))}
+                </div>
             </div>
         </div>
 
