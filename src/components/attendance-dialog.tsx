@@ -157,13 +157,16 @@ export function AttendanceDialog({ classInfo, open, onOpenChange }: AttendanceDi
             </div>
             <div className="overflow-y-auto border rounded-md" style={{maxHeight: 'calc(100vh - 400px)'}}>
                 <div className='divide-y'>
-                    {classInfo.students.map((student) => (
+                    {classInfo.students.map((student, index) => (
                     <div key={student.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 gap-4">
-                        <div>
-                        <div className="font-medium">{student.firstName} {student.lastName}</div>
-                        <div className="text-sm text-muted-foreground">{student.rollNo}</div>
+                        <div className="flex items-center gap-3">
+                           <span className="text-sm font-medium text-muted-foreground w-6">{index + 1}.</span>
+                           <div>
+                             <div className="font-medium">{student.firstName} {student.lastName}</div>
+                             <div className="text-sm text-muted-foreground">{student.rollNo}</div>
+                           </div>
                         </div>
-                        <div className="shrink-0">
+                        <div className="shrink-0 w-full sm:w-auto">
                             <RadioGroup 
                                 defaultValue="present" 
                                 className="flex justify-end gap-4"
