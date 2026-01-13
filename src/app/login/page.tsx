@@ -12,8 +12,8 @@ import { GraduationCap } from 'lucide-react';
 import Link from 'next/link';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('admin@example.com');
-  const [password, setPassword] = useState('12345678');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const auth = useAuth();
   const router = useRouter();
@@ -55,7 +55,7 @@ export default function LoginPage() {
                 <Input
                 id="email-signin"
                 type="email"
-                placeholder="admin@example.com"
+                placeholder="user@example.com"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

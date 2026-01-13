@@ -2,7 +2,7 @@
 import { useMemo } from 'react';
 import { initializeApp, getApp, getApps, type FirebaseOptions } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
-import { getAuth, Auth } from 'firebase/auth';
+import { getAuth, Auth, setPersistence, browserSessionPersistence } from 'firebase/auth';
 import { firebaseConfig } from './config';
 import { useCollection } from './firestore/use-collection';
 import { useDoc } from './firestore/use-doc';
@@ -23,11 +23,15 @@ let auth: any;
 function initializeFirebase(config: FirebaseOptions) {
   if (getApps().length === 0) {
     firebaseApp = initializeApp(config);
+    auth = getAuth(firebaseApp);
+    // Set persistence to session right after initialization
+    setPersistence(auth, browserSessionPersistence);
   } else {
     firebaseApp = getApp();
+    auth = getAuth(firebaseApp);
   }
   firestore = getFirestore(firebaseApp);
-  auth = getAuth(firebaseApp);
+
 
   return { firebaseApp, firestore, auth };
 }
