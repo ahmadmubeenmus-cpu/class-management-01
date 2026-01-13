@@ -1,0 +1,27 @@
+mutation CreateUser($displayName: String!, $email: String!, $userType: String!) @auth(level: USER) {
+  user_insert(data: {displayName: $displayName, email: $email, userType: $userType, createdAt_expr: "request.time"})
+}
+
+query GetClassesForEducator($educatorId: UUID!) @auth(level: USER) {
+  classes(where: {educatorId: {eq: $educatorId}}) {
+    id
+    name
+    description
+    courseCode
+  }
+}
+
+mutation EnrollInClass($studentId: UUID!, $classId: UUID!) @auth(level: USER) {
+  enrollment_insert(data: {studentId: $studentId, classId: $classId, enrollmentDate_expr: "request.time", createdAt_expr: "request.time"})
+}
+
+query ListMaterialsForClass($classId: UUID!) @auth(level: USER) {
+  materials(where: {classId: {eq: $classId}}) {
+    id
+    title
+    description
+    fileUrl
+    fileType
+    uploadDate
+  }
+}
