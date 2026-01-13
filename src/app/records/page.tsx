@@ -310,16 +310,14 @@ export default function RecordsPage() {
               </div>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" className="h-8 gap-1" onClick={handleDownloadCsv}>
-                    <Download className="h-3.5 w-3.5" />
-                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                        Download CSV
-                    </span>
+                    <Download className="h-3.5 w-3.5 hidden sm:inline-block" />
+                    <span className="sm:hidden">CSV</span>
+                    <span className="hidden sm:inline-block">Download CSV</span>
                 </Button>
                  <Button size="sm" variant="outline" className="h-8 gap-1" onClick={handleDownloadPdf}>
-                    <Download className="h-3.5 w-3.5" />
-                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                        Download PDF
-                    </span>
+                    <Download className="h-3.5 w-3.5 hidden sm:inline-block" />
+                    <span className="sm:hidden">PDF</span>
+                    <span className="hidden sm:inline-block">Download PDF</span>
                 </Button>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
